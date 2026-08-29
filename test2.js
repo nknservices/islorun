@@ -28,7 +28,7 @@
       selectedTier: 'monthly',
       
       // Social & Radar
-      ghostMode: false,
+      ghostMode: true,
       userSession: null, // Simulated or Firebase user profile
       followedRunners: [2], // Ayesha followed initially
       chattingRunner: null,
@@ -319,9 +319,11 @@
 
     
     
+    
     function checkLegalConsent() {
-      if (localStorage.getItem('islorun_consent_accepted') === 'true') {
-        document.getElementById('legal-consent-overlay').classList.add('hidden');
+      if (localStorage.getItem('islorun_consent_accepted') !== 'true') {
+        document.getElementById('legal-consent-overlay').classList.remove('hidden');
+      } else {
         const splash = document.getElementById('splash-screen');
         if (splash) splash.remove();
         checkOnboarding();
@@ -458,8 +460,15 @@
       }
     }
 
+    
     function loadProStatus() {
-      state.isPro = localStorage.getItem('islorun_pro') === 'true';
+      let isTrial = false;
+      const trialEnd = localStorage.getItem('islorun_trial_end');
+      if (trialEnd && Date.now() < parseInt(trialEnd)) {
+         isTrial = true;
+      }
+      state.isPro = (localStorage.getItem('islorun_pro') === 'true') || isTrial;
+
       const upgradeBtn = document.getElementById('upgrade-trigger-btn');
       const headerPro = document.getElementById('header-pro-badge');
       const proPromo = document.getElementById('pro-promo-card');
@@ -516,14 +525,25 @@
       const tabs = ['track', 'radar', 'leaderboard', 'studio', 'settings'];
       tabs.forEach(t => {
         const el = document.getElementById('tab-' + t);
-        if (el) el.classList.add('hidden');
+        if (el) {
+          el.classList.remove('active');
+          el.classList.add('hidden'); // fail safe
+        }
       });
       
       // Show active tab
       const activeTab = document.getElementById('tab-' + tabId);
-      if (activeTab) activeTab.classList.remove('hidden');
+      if (activeTab) {
+        activeTab.classList.add('active');
+        activeTab.classList.remove('hidden');
+      }
       
-      if (tabId === 'track') drawTrackCanvas();
+      if (tabId === 'track') {
+        drawTrackCanvas();
+        if (typeof map !== 'undefined' && map) {
+          setTimeout(() => { map.invalidateSize(); }, 100);
+        }
+      }
     }
 
     // --- CANVAS MAP DRAWING ENGINE (vector local trace, zero-dependency) ---
@@ -1149,7 +1169,7 @@
 
         state.activeStudioWorkout = record;
         workoutResetUI();
-        switchTab('studio');
+        switchTab('track');
       }
     }
 
@@ -1777,7 +1797,17 @@
                 height: 170,
                 weight: 70
             };
+            
+        
             localStorage.setItem('islorun_profile', JSON.stringify(profile));
+            if (!localStorage.getItem('islorun_trial_end')) {
+                localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
+            }
+            setTimeout(triggerPWAInstall, 1000);
+        if (!localStorage.getItem('islorun_trial_end')) {
+            localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
+        }
+        setTimeout(triggerPWAInstall, 1000);
             document.getElementById('onboarding-modal').close();
             checkOnboarding();
         }).catch(err => alert("Google Login Error: " + err.message));
@@ -1873,8 +1903,13 @@
       document.getElementById('payment-stage-easypaisa').classList.add('hidden');
       document.getElementById('payment-stage-processing').classList.remove('hidden');
       
+      
       const el = document.getElementById('processing-timer');
       el.innerText = "Sending TRX to database for verification...";
+
+      let fbTimeout = setTimeout(() => {
+          el.innerText = "Network slow... still trying...";
+      }, 5000);
 
       if (db && state.userSession) {
          db.collection('payments').add({
@@ -1884,9 +1919,11 @@
              status: 'pending',
              timestamp: firebase.firestore.FieldValue.serverTimestamp()
          }).then(() => {
+             clearTimeout(fbTimeout);
              el.innerText = "Payment Received! Please allow 1-12 hours for manual verification.";
              setTimeout(() => { closeUpgradeModal(); }, 4000);
          }).catch(err => {
+             clearTimeout(fbTimeout);
              alert("Error saving transaction: " + err.message);
              closeUpgradeModal();
          });
