@@ -154,12 +154,31 @@
     </div>
 
     <!-- Onboarding Dialog -->
+    
+    <!-- Onboarding Dialog -->
     <dialog id="onboarding-modal" class="modal bg-transparent p-0 w-full max-w-sm rounded-[30px] overflow-hidden outline-none border-none z-[1100]">
       <div class="bg-brandCard border border-zinc-800 rounded-[30px] p-6 shadow-2xl flex flex-col gap-4 text-white relative">
         <h2 class="text-xl font-black text-brandAccent text-center">Welcome to islorun</h2>
-        <p class="text-xs text-zinc-400 text-center">Please enter your details to personalize your stats.</p>
+        <p class="text-[10px] text-zinc-400 text-center">Sign in to sync your stats securely across devices.</p>
         
-        <form id="onboarding-form" onsubmit="saveOnboardingProfile(event)" class="flex flex-col gap-3 mt-2">
+        <div class="flex flex-col gap-2.5 mt-2">
+            <button onclick="signInWithGoogle()" class="w-full py-3 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2">
+               <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+               Google
+            </button>
+            <button onclick="signInWithApple()" class="w-full py-3 rounded-2xl bg-black border border-zinc-700 text-white font-black text-xs uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2">
+               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"/></svg>
+               Apple
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2 my-2">
+            <div class="h-px bg-zinc-800 flex-1"></div>
+            <span class="text-[10px] text-zinc-500 font-bold">OR</span>
+            <div class="h-px bg-zinc-800 flex-1"></div>
+        </div>
+        
+        <form id="onboarding-form" onsubmit="saveOnboardingProfile(event)" class="flex flex-col gap-3">
           <input type="text" id="ob-name" placeholder="Name" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brandAccent">
           
           <div class="grid grid-cols-2 gap-3">
@@ -177,12 +196,13 @@
             <input type="number" id="ob-weight" placeholder="Weight (kg)" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brandAccent">
           </div>
           
-          <button type="submit" class="w-full mt-4 py-3.5 rounded-2xl bg-gradient-to-r from-brandAccent to-brandActive text-black font-black text-xs uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-98 transition-all">
-            Save Profile
+          <button type="submit" class="w-full mt-2 py-3.5 rounded-2xl bg-zinc-800 text-white font-black text-xs uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-98 transition-all">
+            Continue Offline
           </button>
         </form>
       </div>
     </dialog>
+
 
     <!-- Splash Loading Screen Mockup (App Icon + Text Logo) -->
     <div id="splash-screen" class="absolute inset-0 bg-brandDark flex flex-col items-center justify-center z-[2000] select-none transition-opacity duration-500">
@@ -497,7 +517,7 @@
         </div>
 
         <!-- Dynamic Studio Canvas Container -->
-        <div id="studio-canvas" class="w-full aspect-[9/16] bg-[#141418] rounded-2xl relative overflow-hidden shadow-lg select-none">
+        <div id="studio-canvas" class="h-[60vh] max-h-[600px] w-auto aspect-[9/16] bg-[#141418] rounded-2xl relative overflow-hidden shadow-lg select-none mx-auto shrink-0">
           <div id="studio-bg-overlay" class="absolute inset-0 bg-cover bg-no-repeat bg-center w-full h-full"></div>
           
           <!-- Draggable Stats Badge -->
@@ -723,7 +743,7 @@
           <div class="flex flex-col gap-3">
             <div class="flex flex-col gap-1">
               <label class="text-[9px] font-bold text-zinc-555 uppercase">Transaction ID (TRX ID)</label>
-              <input type="text" id="ep-trx-id" placeholder="Enter Easypaisa TRX Reference" class="w-full bg-zinc-905 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandAccent">
+              <input type="text" id="ep-trx-id" placeholder="Enter Easypaisa TRX Reference" class="w-full bg-white border-2 border-zinc-300 rounded-xl px-3 py-2 text-sm text-black font-black placeholder-zinc-400 focus:outline-none focus:border-[#1da846]">
             </div>
           </div>
 
@@ -1036,7 +1056,7 @@
       loadWorkouts();
       loadFirebaseConfig();
       checkAuthStatus();
-      checkLegalConsent(); checkOnboarding(); // check profile
+      checkLegalConsent();
 
       // Register PWA service worker
       if ('serviceWorker' in navigator) {
@@ -1070,16 +1090,20 @@
       drawTrackCanvas();
     };
 
+    
     function checkLegalConsent() {
       if (localStorage.getItem('islorun_consent_accepted') === 'true') {
         document.getElementById('legal-consent-overlay').classList.add('hidden');
+        checkOnboarding();
       }
     }
 
     function acceptLegalConsent() {
       localStorage.setItem('islorun_consent_accepted', 'true');
       document.getElementById('legal-consent-overlay').classList.add('hidden');
+      checkOnboarding();
     }
+
 
     // --- FIREBASE SYNC INTEGRATION ---
     let firebaseApp = null;
@@ -1248,11 +1272,11 @@
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; OpenStreetMap &copy; CARTO',
           maxZoom: 19
         }).addTo(map);
-        polyline = L.polyline([], {color: '#ec4899', weight: 5}).addTo(map);
+        polyline = L.polyline([], {color: '#007AFF', weight: 6}).addTo(map);
       }
       
       if (state.currentWorkout.path && state.currentWorkout.path.length > 0) {
@@ -2473,6 +2497,22 @@
         }
     }
     
+    
+    function signInWithGoogle() {
+        if (!auth) return alert("Firebase not initialized.");
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then(() => {
+            document.getElementById('onboarding-modal').close();
+        }).catch(err => alert(err.message));
+    }
+    function signInWithApple() {
+        if (!auth) return alert("Firebase not initialized.");
+        const provider = new firebase.auth.OAuthProvider('apple.com');
+        auth.signInWithPopup(provider).then(() => {
+            document.getElementById('onboarding-modal').close();
+        }).catch(err => alert("Apple Login requires a paid Apple Developer Account to be configured in Firebase.\nError: " + err.message));
+    }
+
     window.saveOnboardingProfile = function(e) {
         e.preventDefault();
         const profile = {
@@ -2545,8 +2585,10 @@
     }
 
     // --- SUB SUBSCRIPTION MANUAL TRX PANEL (SadaBiz connected) ---
+    
     function openUpgradeModal() {
-      resetPaymentModal();
+      document.getElementById('payment-stage-easypaisa').classList.remove('hidden');
+      document.getElementById('payment-stage-processing').classList.add('hidden');
       document.getElementById('upgrade-modal').showModal();
     }
 
@@ -2554,270 +2596,36 @@
       document.getElementById('upgrade-modal').close();
     }
 
-    function selectTier(tier) {
-      state.selectedTier = tier;
-      document.getElementById('tier-monthly').checked = (tier === 'monthly');
-      document.getElementById('tier-lifetime').checked = (tier === 'lifetime');
-    }
-
-    function showPaymentForm(method) {
-      document.getElementById('payment-stage-selection').classList.add('hidden');
-      document.getElementById('payment-stage-methods').classList.add('hidden');
-      if (method === 'easypaisa') {
-        document.getElementById('payment-stage-easypaisa').classList.remove('hidden');
-      } else {
-        document.getElementById('payment-stage-sadapay').classList.remove('hidden');
-      }
-    }
-
-    function resetPaymentModal() {
-      document.getElementById('payment-stage-selection').classList.remove('hidden');
-      document.getElementById('payment-stage-methods').classList.remove('hidden');
-      document.getElementById('payment-stage-easypaisa').classList.add('hidden');
-      document.getElementById('payment-stage-sadapay').classList.add('hidden');
-      document.getElementById('payment-stage-processing').classList.add('hidden');
-      document.getElementById('payment-stage-success').classList.add('hidden');
-    }
-
-    function simulateEasypaisaPayment() {
+    function submitEasypaisaPayment() {
       const trx = document.getElementById('ep-trx-id').value.trim();
       if (trx.length < 5) return alert("Enter a valid Easypaisa Transaction reference ID.");
       
       document.getElementById('payment-stage-easypaisa').classList.add('hidden');
       document.getElementById('payment-stage-processing').classList.remove('hidden');
       
-      let sec = 3;
       const el = document.getElementById('processing-timer');
-      el.innerText = `Verifying TRX reference: ${trx} in ${sec}s...`;
-      
-      const id = setInterval(() => {
-        sec--;
-        el.innerText = `Verifying TRX reference: ${trx} in ${sec}s...`;
-        if (sec <= 0) {
-          clearInterval(id);
-          applySuccessfulPro();
-        }
-      }, 1000);
-    }
+      el.innerText = "Sending TRX to database for verification...";
 
-    function simulateSadaPayPayment() {
-      const trx = document.getElementById('sp-trx-id').value.trim();
-      if (trx.length < 5) return alert("Enter a valid SadaPay Reference Code.");
-      
-      document.getElementById('payment-stage-sadapay').classList.add('hidden');
-      document.getElementById('payment-stage-processing').classList.remove('hidden');
-      
-      let sec = 3;
-      const el = document.getElementById('processing-timer');
-      el.innerText = `Verifying SadaPay Reference: ${trx} in ${sec}s...`;
-      
-      const id = setInterval(() => {
-        sec--;
-        el.innerText = `Verifying SadaPay Reference: ${trx} in ${sec}s...`;
-        if (sec <= 0) {
-          clearInterval(id);
-          applySuccessfulPro();
-        }
-      }, 1000);
-    }
-
-    function applySuccessfulPro() {
-      localStorage.setItem('islorun_pro', 'true');
-      loadProStatus();
-      document.getElementById('payment-stage-processing').classList.add('hidden');
-      document.getElementById('payment-stage-success').classList.remove('hidden');
-      
-      try {
-        const audio = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audio.createOscillator();
-        const gain = audio.createGain();
-        osc.connect(gain); gain.connect(audio.destination);
-        osc.frequency.setValueAtTime(659.25, audio.currentTime); // E5
-        osc.frequency.setValueAtTime(880.00, audio.currentTime + 0.15); // A5
-        gain.gain.setValueAtTime(0.15, audio.currentTime);
-        gain.gain.linearRampToValueAtTime(0.001, audio.currentTime + 0.4);
-        osc.start(); osc.stop(audio.currentTime + 0.4);
-      } catch(e){}
-
-      const canvas = document.getElementById('confetti-canvas');
-      canvas.classList.remove('hidden');
-      const ctx = canvas.getContext('2d');
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
-      let ticks = 60;
-      function step() {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle = '#ec4899';
-        for (let i = 0; i < 40; i++) {
-          ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 4, 4);
-        }
-        ticks--;
-        if (ticks > 0) requestAnimationFrame(step);
-        else canvas.classList.add('hidden');
-      }
-      step();
-    }
-
-    // --- PROFILE & CONFIG STORAGE ---
-    function saveFirebaseConfig() {
-      const val = document.getElementById('firebase-config-input').value.trim();
-      if (val) {
-        localStorage.setItem('firebase_config_islorun', val);
-        alert("Firebase credentials configured! Re-authenticating.");
-        location.reload();
+      if (db && state.userSession) {
+         db.collection('payments').add({
+             uid: state.userSession.uid,
+             email: state.userSession.email,
+             trxId: trx,
+             status: 'pending',
+             timestamp: firebase.firestore.FieldValue.serverTimestamp()
+         }).then(() => {
+             el.innerText = "Payment Received! Please allow 1-12 hours for manual verification.";
+             setTimeout(() => { closeUpgradeModal(); }, 4000);
+         }).catch(err => {
+             alert("Error saving transaction: " + err.message);
+             closeUpgradeModal();
+         });
+      } else {
+         el.innerText = "You must be logged in to upgrade!";
+         setTimeout(() => { closeUpgradeModal(); }, 2000);
       }
     }
 
-    function loadFirebaseConfig() {
-      const config = localStorage.getItem('firebase_config_islorun');
-      if (config) {
-        document.getElementById('firebase-config-input').value = config;
-        initFirebase(config);
-      }
-    }
-
-    function renderWorkoutHistory() {
-      const container = document.getElementById('workout-history-container');
-      if (state.workouts.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-6 text-xs text-zinc-655 border border-dashed border-zinc-900 rounded-2xl bg-zinc-950/40">
-            No saved workouts yet.
-          </div>
-        `;
-        return;
-      }
-      container.innerHTML = '';
-      state.workouts.forEach(w => {
-        const item = document.createElement('div');
-        item.className = "bg-brandCard border border-zinc-900 rounded-2xl p-4 flex justify-between items-center hover:border-zinc-800 transition-all cursor-pointer";
-        item.onclick = () => {
-          state.activeStudioWorkout = w;
-          switchTab('studio');
-          alert(`Loaded ${w.distance} km workout to Photo Studio`);
-        };
-        
-        let icon = 'footprints';
-        if (w.mode === 'cycling') icon = 'bike';
-        if (w.mode === 'walking') icon = 'accessibility';
-        if (w.mode === 'hiking') icon = 'mountain';
-
-        item.innerHTML = `
-          <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-xl bg-zinc-900 text-brandAccent">
-              <i data-lucide="${icon}" class="w-4 h-4"></i>
-            </div>
-            <div class="flex flex-col">
-              <span class="text-xs font-black capitalize flex items-center gap-1">
-                ${w.mode} ${w.flagged ? '<span class="text-[8px] bg-red-900/40 text-red-500 px-1 py-0.5 rounded uppercase">Vehicle Flagged</span>' : ''}
-              </span>
-              <span class="text-[9px] text-zinc-555 mt-0.5">${w.date} • ${formatTimeFriendly(w.time)}</span>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-xs font-black text-white">${w.distance} km</div>
-            <div class="text-[9px] text-zinc-555 font-mono mt-0.5">${formatPaceFriendly(w.pace)}</div>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-      lucide.createIcons();
-    }
-
-    // --- NAVIGATION TAB ROUTING ---
-    function switchTab(tabId) {
-      state.activeTab = tabId;
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.getElementById(`tab-${tabId}`).classList.add('active');
-
-      document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.remove('text-brandAccent');
-        el.classList.add('text-zinc-500');
-      });
-      document.getElementById(`nav-${tabId}`).classList.remove('text-zinc-500');
-      document.getElementById(`nav-${tabId}`).classList.add('text-brandAccent');
-
-      if (tabId === 'track') {
-        drawTrackCanvas();
-      } else if (tabId === 'radar') {
-        initRadarLoop();
-      } else if (tabId === 'leaderboard') {
-        renderLeaderboards();
-      } else if (tabId === 'studio') {
-        renderBadge();
-      } else if (tabId === 'settings') {
-        renderWorkoutHistory();
-      }
-      lucide.createIcons();
-    }
-
-    // --- MOCK CHAT OVERLAY SYSTEM (Paid users check) ---
-    const mockReplies = [
-      "Assalam-o-Alaikum! Running intervals in F-6, what about you?",
-      "Good pace! Keep crushing those goals.",
-      "Are you using SadaPay or Easypaisa for verification check?",
-      "Let's sync up for a Margalla Hills hiking loop on Sunday!"
-    ];
-
-    function openChat(name, avatar) {
-      // Paywall restriction for messaging
-      if (!state.isPro) {
-        alert("🔒 Private messaging is a Premium Feature. Upgrade your account using SadaBiz or Easypaisa to chat!");
-        openUpgradeModal();
-        return;
-      }
-
-      state.chattingRunner = name;
-      document.getElementById('chat-user-name').innerText = name;
-      document.getElementById('chat-user-img').src = avatar;
-      document.getElementById('chat-overlay').classList.remove('hidden');
-
-      const history = document.getElementById('chat-history');
-      history.innerHTML = `
-        <div class="self-center bg-zinc-900 text-zinc-555 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase select-none">beginning of private salaam chat</div>
-        <div class="flex gap-2.5 items-start max-w-[85%] self-start mt-2">
-          <div class="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-zinc-800 bg-zinc-900">
-            <img src="${avatar}" class="w-full h-full object-cover" alt="avatar">
-          </div>
-          <div class="bg-brandCard border border-zinc-855 px-3.5 py-2 text-xs leading-normal">
-            Hey! Running nearby. How is the trail looking today?
-          </div>
-        </div>
-      `;
-    }
-
-    function closeChat() {
-      document.getElementById('chat-overlay').classList.add('hidden');
-    }
-
-    function sendChatMessage(event) {
-      event.preventDefault();
-      const input = document.getElementById('chat-input');
-      const val = input.value.trim();
-      if (!val) return;
-
-      const history = document.getElementById('chat-history');
-      const userBubble = document.createElement('div');
-      userBubble.className = "bg-brandAccent text-white text-xs px-3.5 py-2 rounded-2xl rounded-tr-none max-w-[85%] self-end leading-normal mt-2";
-      userBubble.innerText = val;
-      history.appendChild(userBubble);
-      input.value = '';
-      history.scrollTop = history.scrollHeight;
-
-      setTimeout(() => {
-        const botBubble = document.createElement('div');
-        botBubble.className = "flex gap-2.5 items-start max-w-[85%] self-start mt-2";
-        botBubble.innerHTML = `
-          <div class="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-zinc-800 bg-zinc-900">
-            <img src="${document.getElementById('chat-user-img').src}" class="w-full h-full object-cover" alt="avatar">
-          </div>
-          <div class="bg-brandCard border border-zinc-855 px-3.5 py-2 text-xs leading-normal">
-            ${mockReplies[Math.floor(Math.random() * mockReplies.length)]}
-          </div>
-        `;
-        history.appendChild(botBubble);
-        history.scrollTop = history.scrollHeight;
-      }, 1200);
-    }
 
     function setupDialogFallback() {
       const dialog = document.getElementById('upgrade-modal');
