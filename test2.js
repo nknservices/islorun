@@ -283,7 +283,8 @@
 
     // --- MAIN INITIALIZATION & EVENT LISTENERS ---
     window.onload = function() {
-      lucide.createIcons();
+      try {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       loadProStatus();
       loadWorkouts();
       
@@ -294,15 +295,9 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
       }
+      } catch(e) { console.error("Onload error:", e); }
       
-      // Hide Splash screen after 2.2 seconds
-      setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-          splash.classList.add('opacity-0');
-          setTimeout(() => splash.remove(), 500);
-        }
-      }, 2200);
+      
 
       // Time loop
       setInterval(() => {
@@ -323,9 +318,12 @@
     };
 
     
+    
     function checkLegalConsent() {
       if (localStorage.getItem('islorun_consent_accepted') === 'true') {
         document.getElementById('legal-consent-overlay').classList.add('hidden');
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.remove();
         checkOnboarding();
       }
     }
@@ -333,8 +331,11 @@
     function acceptLegalConsent() {
       localStorage.setItem('islorun_consent_accepted', 'true');
       document.getElementById('legal-consent-overlay').classList.add('hidden');
+      const splash = document.getElementById('splash-screen');
+      if (splash) splash.remove();
       checkOnboarding();
     }
+
 
 
     // --- FIREBASE SYNC INTEGRATION ---
@@ -501,6 +502,7 @@
     let polyline = null;
 
     function drawTrackCanvas() {
+      try {
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
@@ -516,6 +518,7 @@
         polyline.setLatLngs(latlngs);
         map.fitBounds(polyline.getBounds());
       }
+    } catch(err) { console.error("Map Error:", err); }
     }
 
     function old_drawTrackCanvas() {
@@ -1730,19 +1733,23 @@
     }
     
     
+    
     function signInWithGoogle() {
         if (!auth) return alert("Firebase not initialized.");
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then(() => {
+        auth.signInWithPopup(provider).then((result) => {
+            const user = result.user;
+            const profile = {
+                name: user.displayName || "Runner",
+                age: 25,
+                gender: "other",
+                height: 170,
+                weight: 70
+            };
+            localStorage.setItem('islorun_profile', JSON.stringify(profile));
             document.getElementById('onboarding-modal').close();
-        }).catch(err => alert(err.message));
-    }
-    function signInWithApple() {
-        if (!auth) return alert("Firebase not initialized.");
-        const provider = new firebase.auth.OAuthProvider('apple.com');
-        auth.signInWithPopup(provider).then(() => {
-            document.getElementById('onboarding-modal').close();
-        }).catch(err => alert("Apple Login requires a paid Apple Developer Account to be configured in Firebase.\nError: " + err.message));
+            checkOnboarding();
+        }).catch(err => alert("Google Login Error: " + err.message));
     }
 
     window.saveOnboardingProfile = function(e) {
@@ -1922,5 +1929,15 @@ const hardcodedFirebaseConfig = {
   measurementId: "G-8CPEVSWRC5"
 };
 initFirebase(JSON.stringify(hardcodedFirebaseConfig));
+
+
+    // Failsafe: Hide Splash screen after 2.5 seconds regardless of window.onload
+    setTimeout(() => {
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.classList.add('opacity-0');
+        setTimeout(() => splash.remove(), 500);
+      }
+    }, 2500);
 
 

@@ -1283,9 +1283,9 @@
         polyline.setLatLngs(latlngs);
         map.fitBounds(polyline.getBounds());
       }
+    } catch(err) { console.error("Map Error:", err); }
     }
 
-    } catch(err) { console.error("Map Error:", err); }
     function old_drawTrackCanvas() {
       const canvas = document.getElementById('active-track-canvas');
       if (!canvas) return;
