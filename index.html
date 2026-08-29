@@ -423,7 +423,7 @@
             <!-- Ghost Mode Toggle -->
             <button id="ghost-mode-toggle" onclick="toggleGhostMode()" class="px-2.5 py-1 rounded-lg border border-zinc-800 bg-zinc-900 text-[10px] font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-1">
               <i data-lucide="eye" class="w-3 h-3" id="ghost-mode-icon"></i>
-              <span id="ghost-mode-text">Ghost: Off</span>
+              <span id="ghost-mode-text">Ghost: OFF</span>
             </button>
           </div>
         </div>
@@ -1545,11 +1545,11 @@
       const text = document.getElementById('ghost-mode-text');
       if (state.ghostMode) {
         icon.setAttribute('data-lucide', 'eye-off');
-        text.innerText = "Ghost: On";
+        text.innerText = "Ghost: ON";
         alert("Ghost Mode active. You are now hidden from the radar.");
       } else {
         icon.setAttribute('data-lucide', 'eye');
-        text.innerText = "Ghost: Off";
+        text.innerText = "Ghost: OFF";
         alert("Ghost Mode disabled. Your position is visible to nearby runners.");
       }
       lucide.createIcons();
@@ -1716,6 +1716,7 @@
         document.getElementById('workout-picker-screen').classList.add('hidden');
         document.getElementById('active-workout-screen').classList.remove('hidden');
         document.getElementById('active-workout-screen').classList.add('flex');
+        if (typeof map !== 'undefined' && map) setTimeout(() => { map.invalidateSize(); }, 150);
         
         document.getElementById('btn-start-icon').setAttribute('data-lucide', 'pause');
         lucide.createIcons();
@@ -1836,6 +1837,7 @@
         picker.classList.add('hidden');
         hud.classList.remove('hidden');
         hud.classList.add('flex');
+        if (typeof map !== 'undefined' && map) setTimeout(() => { map.invalidateSize(); }, 150);
         
         startBtn.innerHTML = '<i data-lucide="pause" class="w-6 h-6 fill-white"></i>';
         startBtn.className = "h-14 w-14 rounded-full bg-yellow-500 hover:bg-yellow-600 flex items-center justify-center text-white transition-transform active:scale-95";
