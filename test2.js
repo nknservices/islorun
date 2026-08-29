@@ -495,6 +495,37 @@
       renderWorkoutHistory();
     }
 
+    function switchTab(tabId) {
+      if(state.isTracking && tabId !== 'track') {
+        alert("Please pause or end your workout first!");
+        return;
+      }
+      
+      // Update nav buttons
+      document.querySelectorAll('.nav-item').forEach(b => {
+        b.classList.remove('text-brandAccent');
+        b.classList.add('text-zinc-500');
+      });
+      const activeBtn = document.getElementById('nav-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-zinc-500');
+        activeBtn.classList.add('text-brandAccent');
+      }
+      
+      // Hide all tabs
+      const tabs = ['track', 'radar', 'leaderboard', 'studio', 'settings'];
+      tabs.forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.classList.add('hidden');
+      });
+      
+      // Show active tab
+      const activeTab = document.getElementById('tab-' + tabId);
+      if (activeTab) activeTab.classList.remove('hidden');
+      
+      if (tabId === 'track') drawTrackCanvas();
+    }
+
     // --- CANVAS MAP DRAWING ENGINE (vector local trace, zero-dependency) ---
     
     // --- LEAFLET MAP & SENSOR INTEGRATION ---
@@ -506,7 +537,7 @@
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap &copy; CARTO',
           maxZoom: 19
         }).addTo(map);
