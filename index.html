@@ -688,156 +688,58 @@
     </nav>
 
     <!-- Interactive Payment Gateway & Subscription Modal (Connected to SadaBiz Link) -->
-    <dialog id="upgrade-modal" class="modal bg-transparent p-0 w-full max-w-sm rounded-[30px] overflow-hidden outline-none border-none z-[1100]" closedby="any" aria-labelledby="modalTitle">
+    
+    <!-- PRO Upgrade Dialog -->
+    <dialog id="upgrade-modal" class="modal bg-transparent p-0 w-full max-w-sm rounded-[30px] overflow-hidden outline-none border-none z-[1100]">
       <div class="bg-brandCard border border-zinc-800 rounded-[30px] p-6 shadow-2xl flex flex-col gap-5 text-white relative">
-        <button onclick="closeUpgradeModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-900 w-8 h-8 rounded-full flex items-center justify-center select-none">
-          <i data-lucide="x" class="w-4.5 h-4.5"></i>
-        </button>
-
-        <!-- Product Presentation -->
-        <div class="flex flex-col gap-1 items-center text-center mt-3 select-none">
-          <div class="w-12 h-12 rounded-full bg-brandAccent/10 text-brandAccent flex items-center justify-center mb-1 animate-bounce">
-            <i data-lucide="sparkles" class="w-6 h-6"></i>
+        <!-- Header -->
+        <div class="flex justify-between items-start">
+          <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-black text-brandAccent uppercase tracking-widest flex items-center gap-1.5">
+              <i data-lucide="crown" class="w-5 h-5"></i>
+              islorun PRO
+            </h2>
+            <p class="text-xs text-zinc-400">Unlock private tracking & advanced studio templates.</p>
           </div>
-          <h3 id="modalTitle" class="text-lg font-black tracking-tight">Upgrade via SadaBiz</h3>
-          <p class="text-xs text-zinc-450 leading-relaxed max-w-[240px]">Unlock Pakistan checkout channels for Easypaisa & SadaPay.</p>
+          <button onclick="closeUpgradeModal()" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
         </div>
 
-        <!-- Tier Options Selector -->
-        <div class="flex flex-col gap-2 select-none" id="payment-stage-selection">
-          <!-- Monthly Sub -->
-          <label class="cursor-pointer flex items-center justify-between p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-brandAccent transition-all" onclick="selectTier('monthly')">
-            <div class="flex items-center gap-3">
-              <input type="radio" name="upgrade-tier" id="tier-monthly" checked class="accent-brandAccent h-4.5 w-4.5">
-              <div class="flex flex-col">
-                <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Monthly Pass</span>
-                <span class="text-sm font-black mt-0.5">Rs. 250 / mo</span>
-              </div>
-            </div>
-            <span class="text-[10px] font-bold text-zinc-500">SadaBiz Link</span>
-          </label>
-          
-          <!-- Lifetime Elite -->
-          <label class="cursor-pointer flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-brandAccent/5 to-brandActive/5 border-2 border-brandAccent hover:border-brandAccent transition-all" onclick="selectTier('lifetime')">
-            <div class="flex items-center gap-3">
-              <input type="radio" name="upgrade-tier" id="tier-lifetime" class="accent-brandAccent h-4.5 w-4.5">
-              <div class="flex flex-col">
-                <span class="text-xs font-black text-brandAccent uppercase tracking-widest flex items-center gap-1">
-                  Lifetime Elite <span class="bg-brandAccent/20 px-1 py-0.5 rounded text-[8px]">Best Value</span>
-                </span>
-                <span class="text-sm font-black mt-0.5">Rs. 1,500</span>
-              </div>
-            </div>
-            <span class="text-[10px] font-bold text-brandAccent">Pay Once</span>
-          </label>
-        </div>
-
-        <!-- Payment Methods selection screen -->
-        <div class="flex flex-col gap-3 select-none" id="payment-stage-methods">
-          <span class="text-xs font-bold text-zinc-555 uppercase tracking-wider">Select Payment Method</span>
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Easypaisa -->
-            <button onclick="showPaymentForm('easypaisa')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-zinc-900 border border-zinc-850 hover:border-brandAccent transition-all select-none">
-              <div class="w-10 h-10 rounded-full bg-[#1da846]/10 flex items-center justify-center text-[#1da846] mb-2 font-black text-sm">ep</div>
-              <span class="text-xs font-black text-zinc-305">Easypaisa</span>
-              <span class="text-[9px] text-zinc-550 mt-0.5">TRX Verification</span>
-            </button>
-            
-            <!-- SadaPay -->
-            <button onclick="window.open('https://sadapay.pk', '_blank')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-zinc-900 border border-zinc-850 hover:border-brandAccent transition-all select-none">
-              <div class="w-10 h-10 rounded-full bg-[#ff5e5b]/10 flex items-center justify-center text-[#ff5e5b] mb-2 font-black text-sm">sp</div>
-              <span class="text-xs font-black text-zinc-305">SadaBiz</span>
-              <span class="text-[9px] text-zinc-550 mt-0.5">Official Invoice link</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Easypaisa Form (Input phone number & TRX ID) -->
-        <div class="hidden flex-col gap-4 select-none" id="payment-stage-easypaisa">
+        <!-- Easypaisa Form -->
+        <div class="flex flex-col gap-4 select-none" id="payment-stage-easypaisa">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-zinc-405 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-[#1da846]"></span> Easypaisa Gateway
             </span>
-            <button onclick="resetPaymentModal()" class="text-xs font-bold text-zinc-555 hover:text-white">Change Method</button>
           </div>
           
+          <div class="bg-[#1da846]/10 border border-[#1da846]/30 p-4 rounded-xl text-center flex flex-col gap-2">
+             <span class="text-[10px] font-bold text-zinc-400 uppercase">Send Rs. 500 to:</span>
+             <span class="text-xl font-black text-[#1da846]">03365005815</span>
+             <span class="text-sm font-bold text-zinc-200">Naseem khan</span>
+          </div>
+
           <div class="flex flex-col gap-3">
-            <div class="flex flex-col gap-1">
-              <label class="text-[9px] font-bold text-zinc-555 uppercase">Mobile Wallet Number</label>
-              <input type="tel" id="ep-wallet-number" placeholder="03XXXXXXXXX" value="03001234567" class="w-full bg-zinc-905 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandAccent">
-            </div>
             <div class="flex flex-col gap-1">
               <label class="text-[9px] font-bold text-zinc-555 uppercase">Transaction ID (TRX ID)</label>
-              <input type="text" id="ep-trx-id" placeholder="Enter Easypaisa TRX Reference" value="8172648172" class="w-full bg-zinc-905 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandAccent">
+              <input type="text" id="ep-trx-id" placeholder="Enter Easypaisa TRX Reference" class="w-full bg-zinc-905 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandAccent">
             </div>
           </div>
 
-          <button onclick="simulateEasypaisaPayment()" class="w-full py-3 rounded-xl bg-[#1da846] hover:bg-[#158735] text-white font-black text-xs uppercase tracking-wider shadow-lg transition-all">
-            Submit TRX Verification
+          <button onclick="submitEasypaisaPayment()" class="w-full py-3 rounded-xl bg-[#1da846] hover:bg-[#158735] text-white font-black text-xs uppercase tracking-wider shadow-lg transition-all">
+            Submit TRX for Verification
           </button>
         </div>
-
-        <!-- SadaPay / SadaBiz Checkout Form -->
-        <div class="hidden flex-col gap-4 select-none" id="payment-stage-sadapay">
-          <div class="flex justify-between items-center">
-            <span class="text-xs font-bold text-zinc-405 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-[#ff5e5b]"></span> SadaBiz Invoice Checkout
-            </span>
-            <button onclick="resetPaymentModal()" class="text-xs font-bold text-zinc-555 hover:text-white">Change Method</button>
-          </div>
-
-          <div class="flex flex-col gap-3">
-            <!-- SadaBiz Payment Portal Link Button -->
-            <a href="https://sadapay.pk/sadabiz/islorun" target="_blank" class="w-full text-center py-2.5 rounded-xl bg-[#fc5200] hover:brightness-110 text-white font-black text-xs uppercase tracking-wider block select-none shadow-[0_4px_12px_rgba(252,82,0,0.3)]">
-              🔗 Open SadaBiz Payment Portal
-            </a>
-            
-            <p class="text-[10px] text-zinc-500 leading-normal text-center">
-              Click the link above to transfer Rs. 250 (Monthly) or Rs. 1500 (Lifetime) via credit/debit card, then enter your reference code below.
-            </p>
-
-            <div class="flex flex-col gap-1 mt-1">
-              <label class="text-[9px] font-bold text-zinc-555 uppercase">SadaPay Reference Code (TRX ID)</label>
-              <input type="text" id="sp-trx-id" placeholder="SP-XXXXXXX" value="SP-918274" class="w-full bg-zinc-905 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandAccent">
-            </div>
-          </div>
-
-          <button onclick="simulateSadaPayPayment()" class="w-full py-3 rounded-xl bg-[#ff5e5b] hover:bg-[#e04542] text-white font-black text-xs uppercase tracking-wider shadow-lg transition-all">
-            Verify SadaBiz Transaction
-          </button>
-        </div>
-
-        <!-- Payment Processing Spinner Screen -->
+        
+        <!-- Processing Simulation -->
         <div class="hidden flex-col items-center justify-center py-8 gap-4 select-none" id="payment-stage-processing">
-          <div class="w-16 h-16 relative flex items-center justify-center">
-            <div class="animate-spin rounded-full h-14 w-14 border-4 border-brandAccent/20 border-t-brandAccent"></div>
-            <i data-lucide="smartphone" class="w-6 h-6 absolute text-zinc-400" id="processing-device-icon"></i>
-          </div>
-          <div class="flex flex-col items-center text-center">
-            <span class="font-extrabold text-sm text-white" id="processing-status-title">Verifying transaction...</span>
-            <span class="text-[10px] text-zinc-550 mt-1 max-w-[200px]" id="processing-status-subtitle">Checking verification webhook and updating database active triggers.</span>
-          </div>
-          <div id="processing-timer" class="text-xs font-mono font-bold text-brandAccent bg-brandAccent/10 px-3 py-1 rounded-full">
-            Timeout in 4s...
-          </div>
+          <i data-lucide="loader-2" class="w-8 h-8 text-brandAccent animate-spin"></i>
+          <span class="text-xs font-bold text-zinc-300 tracking-wider text-center" id="processing-timer">Processing Transaction...</span>
         </div>
-
-        <!-- Success Animation Page -->
-        <div class="hidden flex-col items-center justify-center py-6 gap-4 select-none" id="payment-stage-success">
-          <div class="w-16 h-16 rounded-full bg-brandActive/10 text-brandActive flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.3)] animate-pulse">
-            <i data-lucide="check-circle" class="w-8 h-8"></i>
-          </div>
-          <div class="flex flex-col items-center text-center">
-            <span class="font-black text-lg text-white">Shukriya! TRX Verified</span>
-            <span class="text-xs text-zinc-405 mt-1 max-w-[220px]">Your account has been upgraded to Elite Pro status! Database updated successfully.</span>
-          </div>
-          <button onclick="closeUpgradeModal()" class="w-full py-3 rounded-xl bg-brandActive text-black font-black text-xs uppercase tracking-wider shadow-lg transition-all mt-2 select-none">
-            Let's Run!
-          </button>
-        </div>
-
       </div>
     </dialog>
+
 
     <!-- Confetti canvas overlay inside mobile viewport -->
     <canvas id="confetti-canvas" class="absolute inset-0 pointer-events-none z-[1200] w-full h-full hidden"></canvas>
