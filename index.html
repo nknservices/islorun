@@ -2929,6 +2929,33 @@
       }
     }
 
+    
+    // --- PWA INSTALLATION ---
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function triggerPWAInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          deferredPrompt = null;
+        });
+      } else {
+        const isIos = () => {
+          const userAgent = window.navigator.userAgent.toLowerCase();
+          return /iphone|ipad|ipod/.test(userAgent);
+        };
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+        
+        if (isIos() && !isInStandaloneMode()) {
+          alert("To install the app on iOS:\nTap the Share icon at the bottom of Safari, then tap 'Add to Home Screen'.");
+        }
+      }
+    }
+
     // --- UTILITIES ---
     function calculateDistance(lat1, lon1, lat2, lon2) {
       const R = 6371; // Earth radius in km
