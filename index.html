@@ -346,13 +346,13 @@
               <span class="text-zinc-555 text-[8px] font-bold uppercase tracking-wider flex items-center gap-1">
                 <span class="h-1.5 w-1.5 rounded-full bg-brandActive animate-ping"></span> Time
               </span>
-              <div class="text-sm font-black font-mono text-brandActive mt-0.5" id="hud-time">00:00:00</div>
+              <div class="text-sm font-black font-mono text-brandActive mt-0.5" id="hud-time" style="font-variant-numeric: tabular-nums;">00:00:00</div>
             </div>
             <!-- Distance -->
             <div class="bg-brandCard rounded-xl p-2 border border-zinc-900 flex flex-col justify-center items-center col-span-2">
               <span class="text-zinc-555 text-[8px] font-bold uppercase tracking-wider">Distance</span>
               <div class="flex items-baseline gap-0.5 mt-0.5">
-                <span id="hud-distance" class="text-sm font-black font-mono text-white">0.00</span>
+                <span id="hud-distance" style="font-variant-numeric: tabular-nums;" class="text-sm font-black font-mono text-white">0.00</span>
                 <span class="text-[9px] text-zinc-400 font-bold">km</span>
               </div>
             </div>
@@ -360,7 +360,7 @@
             <div class="bg-brandCard rounded-xl p-2 border border-zinc-900 flex flex-col justify-center items-center col-span-2">
               <span class="text-zinc-555 text-[8px] font-bold uppercase tracking-wider">Avg Pace</span>
               <div class="flex items-baseline gap-0.5 mt-0.5">
-                <span id="hud-pace" class="text-sm font-black font-mono text-white">--'--</span>
+                <span id="hud-pace" style="font-variant-numeric: tabular-nums;" class="text-sm font-black font-mono text-white">--'--</span>
                 <span class="text-[8px] text-zinc-550">/km</span>
               </div>
             </div>
@@ -380,7 +380,7 @@
                 <i data-lucide="footprints" class="w-3 h-3 text-brandAccent"></i> Step Count
               </span>
               <div class="flex items-baseline gap-0.5 mt-0.5">
-                <span id="hud-steps" class="text-sm font-black font-mono text-brandAccent">0</span>
+                <span id="hud-steps" style="font-variant-numeric: tabular-nums;" class="text-sm font-black font-mono text-brandAccent">0</span>
                 <span class="text-[9px] text-brandAccent">steps</span>
               </div>
             </div>
@@ -683,7 +683,7 @@
     </main>
 
     <!-- Bottom Navigation Bar (5-tab responsive grid layout) -->
-    <nav class="h-18 border-t border-zinc-900 bg-brandDark/95 backdrop-blur-md px-2 flex justify-between items-center select-none flex-shrink-0 z-[1000]">
+    <nav class="h-18 border-t border-zinc-900 bg-brandDark/95 backdrop-blur-md px-2 flex justify-between items-center select-none flex-shrink-0 z-[1000]" style="padding-bottom: max(12px, env(safe-area-inset-bottom));">
       <button onclick="switchTab('track')" id="nav-track" class="nav-item flex flex-col items-center justify-center gap-1 py-1.5 flex-1 text-brandAccent">
         <i data-lucide="map" class="w-5 h-5"></i>
         <span class="text-[9px] font-bold tracking-tight">Track</span>
@@ -720,7 +720,7 @@
             </h2>
             <p class="text-xs text-zinc-400">Unlock private tracking & advanced studio templates.</p>
           </div>
-          <button onclick="closeUpgradeModal()" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
+          <button onclick="event.stopPropagation(); event.preventDefault(); closeUpgradeModal()" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
@@ -1845,13 +1845,19 @@
         if (state.isGPSSimulation) {
           mockRouteIndex = 0;
           workout.timerId = setInterval(updateSimulationTick, 1000);
+        enableWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
         } else {
           workout.timerId = setInterval(updateSimulationTick, 1000);
+        enableWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
         }
       } else if (!workout.isPaused) {
         // Pause Workout state
         workout.isPaused = true;
         clearInterval(workout.timerId);
+        releaseWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
         startBtn.innerHTML = '<i data-lucide="play" class="w-6 h-6 fill-white"></i>';
         startBtn.className = "h-14 w-14 rounded-full bg-brandActive hover:bg-green-600 flex items-center justify-center text-white transition-transform active:scale-95";
         lucide.createIcons();
@@ -1863,6 +1869,8 @@
         startBtn.className = "h-14 w-14 rounded-full bg-yellow-500 hover:bg-yellow-600 flex items-center justify-center text-white transition-transform active:scale-95";
         lucide.createIcons();
         workout.timerId = setInterval(updateSimulationTick, 1000);
+        enableWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
       }
     }
 
@@ -1887,6 +1895,15 @@
       if (workout.distance > 0.01) {
         const paceSecs = workout.elapsedTime / workout.distance;
         workout.pace = formatPace(paceSecs);
+      
+      // Sim steps
+      let stepsPerKm = 1320;
+      if (state.workoutMode === 'walking') stepsPerKm = 1400;
+      if (state.workoutMode === 'hiking') stepsPerKm = 1450;
+      if (state.workoutMode === 'cycling') stepsPerKm = 0;
+      workout.steps = Math.floor(workout.distance * stepsPerKm);
+      document.getElementById('hud-steps').innerText = workout.steps;
+
         document.getElementById('hud-pace').innerText = workout.pace;
       } else {
         workout.pace = "--'--";
@@ -1907,6 +1924,8 @@
 
       if (confirm("End and save workout?")) {
         clearInterval(workout.timerId);
+        releaseWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
 
         let flagged = false;
         if (workout.distance > 0.1) {
@@ -2599,7 +2618,7 @@
       const studioNode = document.getElementById('studio-canvas');
       html2canvas(studioNode, { 
         useCORS: true, 
-        scale: 2, 
+        scale: window.devicePixelRatio || 2, 
         backgroundColor: '#141418' 
       }).then(canvas => {
         canvas.toBlob(blob => {
@@ -2664,8 +2683,16 @@
       document.getElementById('upgrade-modal').close();
     }
 
+    
     function submitEasypaisaPayment() {
+      if (!state.userSession) {
+        alert("You must sign in to link your payment.");
+        closeUpgradeModal();
+        signInWithGoogle();
+        return;
+      }
       const trx = document.getElementById('ep-trx-id').value.trim();
+
       if (trx.length < 5) return alert("Enter a valid Easypaisa Transaction reference ID.");
       
       document.getElementById('payment-stage-easypaisa').classList.add('hidden');
@@ -2799,6 +2826,17 @@
         state.activeStudioWorkout = w;
         switchTab('studio');
       }
+    }
+
+    
+    let wakeLock = null;
+    async function enableWakeLock() {
+      try {
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) { console.warn('Wake Lock error:', err); }
+    }
+    function releaseWakeLock() {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
     }
 
     // --- UTILITIES ---
