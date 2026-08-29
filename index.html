@@ -1302,7 +1302,7 @@
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap &copy; CARTO',
           maxZoom: 19
         }).addTo(map);
