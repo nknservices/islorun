@@ -498,7 +498,7 @@
 
         <!-- Dynamic Studio Canvas Container -->
         <div id="studio-canvas" class="w-full aspect-[9/16] bg-[#141418] rounded-2xl relative overflow-hidden shadow-lg select-none">
-          <div id="studio-bg-overlay" class="absolute inset-0 bg-contain bg-no-repeat bg-center w-full h-full"></div>
+          <div id="studio-bg-overlay" class="absolute inset-0 bg-cover bg-no-repeat bg-center w-full h-full"></div>
           
           <!-- Draggable Stats Badge -->
           <div id="drag-badge" class="absolute top-[10%] left-[10%] min-w-[160px] cursor-grab active:cursor-grabbing z-40 select-none">
@@ -1162,7 +1162,7 @@
       initDragBadgeControls();
       setupDialogFallback();
       setWorkoutMode('running');
-      setStudioBg('checkerboard', '');
+      setStudioBg('image', 'https://images.unsplash.com/photo-1552674605-db6aea4bc09c?w=400&q=80');
 
       // Setup initial canvas draw loop
       drawTrackCanvas();
