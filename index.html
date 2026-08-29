@@ -109,7 +109,7 @@
   <div class="w-full max-w-md h-screen md:h-[840px] md:rounded-[40px] md:border-[12px] md:border-zinc-800 bg-brandDark flex flex-col relative overflow-hidden shadow-2xl">
     
     <!-- Startup Disclaimers and Legal Consent Overlay (Pakistan PECA Compliance) -->
-    <div id="legal-consent-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex flex-col justify-between p-6 overflow-y-auto select-none">
+    <div id="legal-consent-overlay" class="hidden fixed inset-0 bg-slate-950 z-[9999] flex flex-col justify-between p-6 overflow-y-auto select-none">
       <div class="flex flex-col gap-4 mt-6">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg overflow-hidden border border-brandAccent/30 flex items-center justify-center bg-black shrink-0">
@@ -793,7 +793,7 @@
       selectedTier: 'monthly',
       
       // Social & Radar
-      ghostMode: false,
+      ghostMode: true,
       userSession: null, // Simulated or Firebase user profile
       followedRunners: [2], // Ayesha followed initially
       chattingRunner: null,
@@ -1084,13 +1084,17 @@
 
     
     
+    
     function checkLegalConsent() {
-      if (localStorage.getItem('islorun_consent_accepted') === 'true') {
-        document.getElementById('legal-consent-overlay').classList.add('hidden');
+      if (localStorage.getItem('islorun_consent_accepted') !== 'true') {
+        document.getElementById('legal-consent-overlay').classList.remove('hidden');
+      } else {
         const splash = document.getElementById('splash-screen');
         if (splash) splash.remove();
         checkOnboarding();
       }
+    }
+
     }
 
     function acceptLegalConsent() {
@@ -1223,8 +1227,15 @@
       }
     }
 
+    
     function loadProStatus() {
-      state.isPro = localStorage.getItem('islorun_pro') === 'true';
+      let isTrial = false;
+      const trialEnd = localStorage.getItem('islorun_trial_end');
+      if (trialEnd && Date.now() < parseInt(trialEnd)) {
+         isTrial = true;
+      }
+      state.isPro = (localStorage.getItem('islorun_pro') === 'true') || isTrial;
+
       const upgradeBtn = document.getElementById('upgrade-trigger-btn');
       const headerPro = document.getElementById('header-pro-badge');
       const proPromo = document.getElementById('pro-promo-card');
@@ -1925,7 +1936,7 @@
 
         state.activeStudioWorkout = record;
         workoutResetUI();
-        switchTab('studio');
+        switchTab('track');
       }
     }
 
@@ -2553,7 +2564,17 @@
                 height: 170,
                 weight: 70
             };
+            
+        
             localStorage.setItem('islorun_profile', JSON.stringify(profile));
+            if (!localStorage.getItem('islorun_trial_end')) {
+                localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
+            }
+            setTimeout(triggerPWAInstall, 1000);
+        if (!localStorage.getItem('islorun_trial_end')) {
+            localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
+        }
+        setTimeout(triggerPWAInstall, 1000);
             document.getElementById('onboarding-modal').close();
             checkOnboarding();
         }).catch(err => alert("Google Login Error: " + err.message));
@@ -2649,8 +2670,13 @@
       document.getElementById('payment-stage-easypaisa').classList.add('hidden');
       document.getElementById('payment-stage-processing').classList.remove('hidden');
       
+      
       const el = document.getElementById('processing-timer');
       el.innerText = "Sending TRX to database for verification...";
+
+      let fbTimeout = setTimeout(() => {
+          el.innerText = "Network slow... still trying...";
+      }, 5000);
 
       if (db && state.userSession) {
          db.collection('payments').add({
@@ -2660,9 +2686,11 @@
              status: 'pending',
              timestamp: firebase.firestore.FieldValue.serverTimestamp()
          }).then(() => {
+             clearTimeout(fbTimeout);
              el.innerText = "Payment Received! Please allow 1-12 hours for manual verification.";
              setTimeout(() => { closeUpgradeModal(); }, 4000);
          }).catch(err => {
+             clearTimeout(fbTimeout);
              alert("Error saving transaction: " + err.message);
              closeUpgradeModal();
          });
