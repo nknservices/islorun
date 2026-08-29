@@ -1167,7 +1167,7 @@
         profileCard.classList.add('hidden');
       }
       renderLeaderboards();
-      renderWorkoutHistory();
+      
     }
 
     function handleLogin() {
@@ -1259,7 +1259,7 @@
     // Save History
     function saveWorkouts() {
       localStorage.setItem('islorun_workouts', JSON.stringify(state.workouts));
-      renderWorkoutHistory();
+      
     }
 
     function switchTab(tabId) {
