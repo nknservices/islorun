@@ -1049,7 +1049,7 @@
     // --- MAIN INITIALIZATION & EVENT LISTENERS ---
     window.onload = function() {
       try {
-      lucide.createIcons();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       loadProStatus();
       loadWorkouts();
       
@@ -1267,6 +1267,7 @@
     let polyline = null;
 
     function drawTrackCanvas() {
+      try {
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
@@ -1284,6 +1285,7 @@
       }
     }
 
+    } catch(err) { console.error("Map Error:", err); }
     function old_drawTrackCanvas() {
       const canvas = document.getElementById('active-track-canvas');
       if (!canvas) return;
@@ -2496,19 +2498,23 @@
     }
     
     
+    
     function signInWithGoogle() {
         if (!auth) return alert("Firebase not initialized.");
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then(() => {
+        auth.signInWithPopup(provider).then((result) => {
+            const user = result.user;
+            const profile = {
+                name: user.displayName || "Runner",
+                age: 25,
+                gender: "other",
+                height: 170,
+                weight: 70
+            };
+            localStorage.setItem('islorun_profile', JSON.stringify(profile));
             document.getElementById('onboarding-modal').close();
-        }).catch(err => alert(err.message));
-    }
-    function signInWithApple() {
-        if (!auth) return alert("Firebase not initialized.");
-        const provider = new firebase.auth.OAuthProvider('apple.com');
-        auth.signInWithPopup(provider).then(() => {
-            document.getElementById('onboarding-modal').close();
-        }).catch(err => alert("Apple Login requires a paid Apple Developer Account to be configured in Firebase.\nError: " + err.message));
+            checkOnboarding();
+        }).catch(err => alert("Google Login Error: " + err.message));
     }
 
     window.saveOnboardingProfile = function(e) {
