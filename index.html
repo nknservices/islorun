@@ -419,12 +419,19 @@
               </span>
               <span class="text-xs font-bold">Social Radar (Nearby)</span>
             </div>
-            
-            <!-- Ghost Mode Toggle -->
-            <button id="ghost-mode-toggle" onclick="toggleGhostMode()" class="px-2.5 py-1 rounded-lg border border-zinc-800 bg-zinc-900 text-[10px] font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-1">
-              <i data-lucide="eye" class="w-3 h-3" id="ghost-mode-icon"></i>
-              <span id="ghost-mode-text">Ghost: OFF</span>
-            </button>
+            <div class="flex items-center gap-2 pointer-events-auto">
+              <!-- Anim Toggle -->
+              <button id="radar-anim-toggle" onclick="toggleRadarAnim()" class="px-2.5 py-1 rounded-lg border border-zinc-800 bg-zinc-900 text-[10px] font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-1">
+                <i data-lucide="radio" class="w-3 h-3" id="radar-anim-icon"></i>
+                <span id="radar-anim-text">Sweep: ON</span>
+              </button>
+              <!-- Ghost Mode Toggle -->
+              <button id="ghost-mode-toggle" onclick="toggleGhostMode()" class="px-2.5 py-1 rounded-lg border border-zinc-800 bg-zinc-900 text-[10px] font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-1">
+
+                <i data-lucide="eye" class="w-3 h-3" id="ghost-mode-icon"></i>
+                <span id="ghost-mode-text">Ghost: OFF</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -440,7 +447,7 @@
               <i data-lucide="radar" class="w-8 h-8 text-brandAccent animate-pulse"></i>
             </div>
             <span class="text-brandAccent font-bold text-sm tracking-widest animate-pulse uppercase">Searching Nearby...</span>
-            <span class="text-zinc-500 text-[10px] mt-2">Locating dummy bots and active runners</span>
+            <span class="text-zinc-500 text-[10px] mt-2">Locating active runners...</span>
           </div>
 
 
@@ -1442,7 +1449,7 @@
       if (radarAnimationId) cancelAnimationFrame(radarAnimationId);
       
       function renderLoop() {
-        if (state.activeTab === 'radar') {
+        if (state.activeTab === 'radar' && radarAnimEnabled) {
           drawRadarCanvas();
           radarAnimationId = requestAnimationFrame(renderLoop);
         }
@@ -2954,6 +2961,28 @@
           alert("To install the app on iOS:\nTap the Share icon at the bottom of Safari, then tap 'Add to Home Screen'.");
         }
       }
+    }
+
+    
+    let radarAnimEnabled = true;
+    function toggleRadarAnim() {
+      radarAnimEnabled = !radarAnimEnabled;
+      const icon = document.getElementById('radar-anim-icon');
+      const text = document.getElementById('radar-anim-text');
+      
+      if (radarAnimEnabled) {
+        icon.setAttribute('data-lucide', 'radio');
+        text.innerText = 'Sweep: ON';
+        initRadarLoop();
+      } else {
+        icon.setAttribute('data-lucide', 'circle-off');
+        text.innerText = 'Sweep: OFF';
+        if (radarAnimationId) {
+          cancelAnimationFrame(radarAnimationId);
+          radarAnimationId = null;
+        }
+      }
+      lucide.createIcons();
     }
 
     // --- UTILITIES ---
