@@ -2879,7 +2879,7 @@
       if (!acc || acc.x === null) return;
       
       const magnitude = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
-      if (magnitude > 11.8 && (Date.now() - lastStepTime > 320)) {
+      if (magnitude > 10.8 && (Date.now() - lastStepTime > 320)) {
         state.currentWorkout.steps++;
         document.getElementById('hud-steps').innerText = state.currentWorkout.steps;
         lastStepTime = Date.now();
