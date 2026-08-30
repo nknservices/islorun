@@ -131,12 +131,6 @@ const snapMapScript = `
 html = html.replace(/function initRadarLoop\(\) \{[\s\S]*?function toggleGhostMode\(\) \{/, snapMapScript + '\\n    function toggleGhostMode() {');
 
 // Ghost mode toggle should re-spawn or clear snap markers instead of drawing canvas
-html = html.replace(/drawRadarCanvas\(\);/, \`if(state.activeTab === 'radar') {
-        snapMarkers.forEach(m => snapMap.removeLayer(m));
-        snapMarkers = [];
-        if(!state.ghostMode && snapMap) {
-           spawnSnapMarkers([snapMap.getCenter().lat, snapMap.getCenter().lng]);
-        }
-      }\`);
+html = html.replace(/drawRadarCanvas\(\);/, "if(state.activeTab === 'radar') {\n        snapMarkers.forEach(m => snapMap.removeLayer(m));\n        snapMarkers = [];\n        if(!state.ghostMode && snapMap) {\n           spawnSnapMarkers([snapMap.getCenter().lat, snapMap.getCenter().lng]);\n        }\n      }");
 
 fs.writeFileSync('index.html', html, 'utf-8');
