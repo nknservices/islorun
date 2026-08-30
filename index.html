@@ -1371,7 +1371,7 @@
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; OpenStreetMap &copy; CARTO',
           maxZoom: 19
         }).addTo(map);
@@ -2096,7 +2096,7 @@
         id: 2,
         name: 'Template 3',
         label: 'Monochrome Racer',
-        pro: true,
+        pro: false,
         html: (w) => `
           <div class="flex flex-col justify-between p-6 text-white select-none w-[200px] h-[340px] relative font-sans bg-transparent">
             <div class="flex flex-col items-center text-center mt-3 gap-1">
@@ -2130,7 +2130,7 @@
         id: 3,
         name: 'Template 4',
         label: 'Minimalist Typo',
-        pro: true,
+        pro: false,
         html: (w) => `
           <div class="flex flex-col justify-between p-6 text-white select-none w-[200px] h-[340px] relative font-sans">
             <div class="flex flex-col text-left gap-3 mt-2">
@@ -2164,7 +2164,7 @@
         id: 4,
         name: 'Template 5',
         label: 'Analytics Dashboard',
-        pro: true,
+        pro: false,
         html: (w) => `
           <div class="flex flex-col justify-between p-5 text-white select-none w-[220px] h-[350px] relative font-sans bg-transparent">
             <div class="flex flex-col gap-1 mt-1">
