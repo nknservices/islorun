@@ -1759,7 +1759,14 @@
                  }
              }
              drawTrackCanvas(); // Updates Leaflet
-          }, (err) => console.log(err), { enableHighAccuracy: true });
+          }, (err) => {
+              console.log(err);
+              if(err.code === 1) {
+                  alert("GPS Permission Denied. If you are on an iPhone and using the installed app, Apple restricts GPS access for privacy. Please go to your iPhone Settings > Privacy & Security > Location Services, and ensure Safari/Websites have location access enabled.");
+              } else {
+                  alert("GPS Error: " + err.message);
+              }
+          }, { enableHighAccuracy: true });
         }
         
         // Start step counter using DeviceMotion

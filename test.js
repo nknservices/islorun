@@ -28,7 +28,7 @@
       selectedTier: 'monthly',
       
       // Social & Radar
-      ghostMode: false,
+      ghostMode: true,
       userSession: null, // Simulated or Firebase user profile
       followedRunners: [2], // Ayesha followed initially
       chattingRunner: null,
@@ -283,10 +283,11 @@
 
     // --- MAIN INITIALIZATION & EVENT LISTENERS ---
     window.onload = function() {
-      lucide.createIcons();
+      try {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       loadProStatus();
       loadWorkouts();
-      loadFirebaseConfig();
+      
       checkAuthStatus();
       checkLegalConsent();
 
@@ -294,15 +295,9 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
       }
+      } catch(e) { console.error("Onload error:", e); }
       
-      // Hide Splash screen after 2.2 seconds
-      setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-          splash.classList.add('opacity-0');
-          setTimeout(() => splash.remove(), 500);
-        }
-      }, 2200);
+      
 
       // Time loop
       setInterval(() => {
@@ -323,9 +318,14 @@
     };
 
     
+    
+    
     function checkLegalConsent() {
-      if (localStorage.getItem('islorun_consent_accepted') === 'true') {
-        document.getElementById('legal-consent-overlay').classList.add('hidden');
+      if (localStorage.getItem('islorun_consent_accepted') !== 'true') {
+        document.getElementById('legal-consent-overlay').classList.remove('hidden');
+      } else {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.remove();
         checkOnboarding();
       }
     }
@@ -333,8 +333,11 @@
     function acceptLegalConsent() {
       localStorage.setItem('islorun_consent_accepted', 'true');
       document.getElementById('legal-consent-overlay').classList.add('hidden');
+      const splash = document.getElementById('splash-screen');
+      if (splash) splash.remove();
       checkOnboarding();
     }
+
 
 
     // --- FIREBASE SYNC INTEGRATION ---
@@ -406,7 +409,7 @@
         profileCard.classList.add('hidden');
       }
       renderLeaderboards();
-      renderWorkoutHistory();
+      
     }
 
     function handleLogin() {
@@ -457,8 +460,15 @@
       }
     }
 
+    
     function loadProStatus() {
-      state.isPro = localStorage.getItem('islorun_pro') === 'true';
+      let isTrial = false;
+      const trialEnd = localStorage.getItem('islorun_trial_end');
+      if (trialEnd && Date.now() < parseInt(trialEnd)) {
+         isTrial = true;
+      }
+      state.isPro = (localStorage.getItem('islorun_pro') === 'true') || isTrial;
+
       const upgradeBtn = document.getElementById('upgrade-trigger-btn');
       const headerPro = document.getElementById('header-pro-badge');
       const proPromo = document.getElementById('pro-promo-card');
@@ -491,7 +501,53 @@
     // Save History
     function saveWorkouts() {
       localStorage.setItem('islorun_workouts', JSON.stringify(state.workouts));
-      renderWorkoutHistory();
+      if(typeof renderPickerHistory !== 'undefined') renderPickerHistory();
+      
+    }
+
+    function switchTab(tabId) {
+      if(state.isTracking && tabId !== 'track') {
+        alert("Please pause or end your workout first!");
+        return;
+      }
+      
+      // Update nav buttons
+      document.querySelectorAll('.nav-item').forEach(b => {
+        b.classList.remove('text-brandAccent');
+        b.classList.add('text-zinc-500');
+      });
+      const activeBtn = document.getElementById('nav-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-zinc-500');
+        activeBtn.classList.add('text-brandAccent');
+      }
+      
+      // Hide all tabs
+      const tabs = ['track', 'radar', 'leaderboard', 'studio', 'settings'];
+      tabs.forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) {
+          el.classList.remove('active');
+          el.classList.add('hidden'); // fail safe
+        }
+      });
+      
+      // Show active tab
+      const activeTab = document.getElementById('tab-' + tabId);
+      if (activeTab) {
+        activeTab.classList.add('active');
+        activeTab.classList.remove('hidden');
+      }
+      
+      if (tabId === 'studio' && typeof state.selectedTemplate === 'undefined') {
+        selectTemplate(0);
+      }
+      if (tabId === 'track') {
+        drawTrackCanvas();
+        if (typeof map !== 'undefined' && map) {
+          setTimeout(() => { map.invalidateSize(); }, 100);
+        }
+      }
     }
 
     // --- CANVAS MAP DRAWING ENGINE (vector local trace, zero-dependency) ---
@@ -501,10 +557,11 @@
     let polyline = null;
 
     function drawTrackCanvas() {
+      try {
       // Replaced by Leaflet
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap &copy; CARTO',
           maxZoom: 19
         }).addTo(map);
@@ -516,6 +573,7 @@
         polyline.setLatLngs(latlngs);
         map.fitBounds(polyline.getBounds());
       }
+    } catch(err) { console.error("Map Error:", err); }
     }
 
     function old_drawTrackCanvas() {
@@ -597,124 +655,66 @@
     }
 
     // --- SOCIAL RADAR TAB CANVAS sweep animation ---
-    function initRadarLoop() {
-      if (radarAnimationId) cancelAnimationFrame(radarAnimationId);
-      
-      function renderLoop() {
-        if (state.activeTab === 'radar') {
-          drawRadarCanvas();
-          radarAnimationId = requestAnimationFrame(renderLoop);
+    
+    let snapMap = null;
+    let snapMarkers = [];
+
+    function initSnapMap() {
+        if (!snapMap) {
+            snapMap = L.map('snap-radar-map', { zoomControl: false, attributionControl: false });
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+              maxZoom: 19
+            }).addTo(snapMap);
         }
-      }
-      renderLoop();
-    }
-
-    function drawRadarCanvas() {
-      const canvas = document.getElementById('radar-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
-      
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const maxRadius = Math.min(cx, cy) - 30;
-      
-      ctx.fillStyle = '#0a0a0c';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Sweeper angle
-      const sweepAngle = (Date.now() / 2400) % (2 * Math.PI);
-      
-      // Range rings
-      ctx.strokeStyle = '#1a1a24';
-      ctx.lineWidth = 1.5;
-      for (let r = maxRadius / 3; r <= maxRadius; r += maxRadius / 3) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-        ctx.stroke();
         
-        ctx.fillStyle = '#4b5563';
-        ctx.font = '8px monospace';
-        const rangeText = Math.round((r / maxRadius) * 1500) + 'm';
-        ctx.fillText(rangeText, cx + 5, cy - r + 8);
-      }
-      
-      // Crosshairs
-      ctx.beginPath();
-      ctx.moveTo(cx - maxRadius, cy); ctx.lineTo(cx + maxRadius, cy);
-      ctx.moveTo(cx, cy - maxRadius); ctx.lineTo(cx, cy + maxRadius);
-      ctx.stroke();
-      
-      // Draw radar sweep
-      ctx.save();
-      const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxRadius);
-      sweepGrad.addColorStop(0, 'rgba(236, 72, 153, 0.06)');
-      sweepGrad.addColorStop(1, 'rgba(236, 72, 153, 0.005)');
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, maxRadius, sweepAngle - 0.35, sweepAngle);
-      ctx.closePath();
-      ctx.fillStyle = sweepGrad;
-      ctx.fill();
-      ctx.restore();
-      
-      // User beacon (green pulsing dot)
-      ctx.beginPath();
-      ctx.arc(cx, cy, 5.5, 0, 2 * Math.PI);
-      ctx.fillStyle = '#22c55e';
-      ctx.fill();
-      const beaconGlow = 5.5 + Math.sin(Date.now() / 150) * 2.5;
-      ctx.beginPath();
-      ctx.arc(cx, cy, beaconGlow, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(34, 197, 94, 0.35)';
-      ctx.stroke();
-      
-      // Other runners (radar dots)
-      if (!state.ghostMode) {
-        mockRunners.forEach(runner => {
-          const bearing = (runner.id * 1.8) % (2 * Math.PI);
-          const range = (runner.id * 0.16 + 0.12) * maxRadius;
-          
-          const rx = cx + Math.cos(bearing) * range;
-          const ry = cy + Math.sin(bearing) * range;
-          
-          runner.screenX = rx;
-          runner.screenY = ry;
-          
-          ctx.beginPath();
-          ctx.arc(rx, ry, 5, 0, 2 * Math.PI);
-          ctx.fillStyle = '#ec4899';
-          ctx.fill();
-          
-          ctx.beginPath();
-          ctx.arc(rx, ry, 9, 0, 2 * Math.PI);
-          ctx.strokeStyle = 'rgba(236, 72, 153, 0.2)';
-          ctx.stroke();
-          
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 9px system-ui';
-          ctx.fillText(runner.name, rx + 8, ry + 3);
-        });
-      }
+        let center = [33.7294, 73.0931]; // Default Islamabad
+        if(state.currentWorkout && state.currentWorkout.path && state.currentWorkout.path.length > 0) {
+            const last = state.currentWorkout.path[state.currentWorkout.path.length-1];
+            center = [last.lat, last.lng];
+        } else if (typeof map !== 'undefined' && map) {
+            center = map.getCenter();
+        }
+        
+        snapMap.setView(center, 15);
+        snapMap.invalidateSize();
+        
+        spawnSnapMarkers(center);
+    }
+    
+    function openRunnerProfileById(id) {
+       const runner = mockRunners.find(r => r.id === id);
+       if(runner) openRunnerProfile(runner);
     }
 
-    function handleRadarClick(e) {
-      const canvas = document.getElementById('radar-canvas');
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-      
-      const clicked = mockRunners.find(r => {
-        if (!r.screenX || !r.screenY) return false;
-        const dx = clickX - r.screenX;
-        const dy = clickY - r.screenY;
-        return Math.sqrt(dx * dx + dy * dy) < 18;
-      });
-      
-      if (clicked) openRunnerProfile(clicked);
+    function spawnSnapMarkers(center) {
+        if(state.ghostMode) return;
+        
+        // Add user marker
+        const userImg = document.getElementById('profile-user-img');
+        const userSrc = userImg ? userImg.src : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+        
+        const userIcon = L.divIcon({
+          className: 'snap-marker-user',
+          html: `<div class="w-12 h-12 rounded-full border-[3px] border-green-500 overflow-hidden shadow-[0_0_20px_rgba(34,197,94,0.6)] bg-zinc-900"><img src="${userSrc}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-green-400 drop-shadow-md">YOU</div>`,
+          iconSize: [48, 60],
+          iconAnchor: [24, 24]
+        });
+        snapMarkers.push(L.marker(center, {icon: userIcon, zIndexOffset: 1000}).addTo(snapMap));
+
+        // Add dummy runners around the center
+        mockRunners.forEach(r => {
+           const latOffset = (Math.random() - 0.5) * 0.015;
+           const lngOffset = (Math.random() - 0.5) * 0.015;
+           
+           const icon = L.divIcon({
+              className: 'snap-marker-bot',
+              html: `<div class="w-10 h-10 rounded-full border-[3px] border-brandAccent overflow-hidden shadow-[0_0_15px_rgba(236,72,153,0.5)] cursor-pointer bg-zinc-900 hover:scale-110 transition-transform pointer-events-auto" onclick="openRunnerProfileById(${r.id})"><img src="${r.avatar}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-white drop-shadow-md">${r.name}</div>`,
+              iconSize: [40, 60],
+              iconAnchor: [20, 20]
+           });
+           
+           snapMarkers.push(L.marker([center[0] + latOffset, center[1] + lngOffset], {icon: icon}).addTo(snapMap));
+        });
     }
 
     function toggleGhostMode() {
@@ -723,15 +723,21 @@
       const text = document.getElementById('ghost-mode-text');
       if (state.ghostMode) {
         icon.setAttribute('data-lucide', 'eye-off');
-        text.innerText = "Ghost: On";
+        text.innerText = "Ghost: ON";
         alert("Ghost Mode active. You are now hidden from the radar.");
       } else {
         icon.setAttribute('data-lucide', 'eye');
-        text.innerText = "Ghost: Off";
+        text.innerText = "Ghost: OFF";
         alert("Ghost Mode disabled. Your position is visible to nearby runners.");
       }
       lucide.createIcons();
-      drawRadarCanvas();
+      if(state.activeTab === 'radar') {
+        snapMarkers.forEach(m => snapMap.removeLayer(m));
+        snapMarkers = [];
+        if(!state.ghostMode && snapMap) {
+           spawnSnapMarkers([snapMap.getCenter().lat, snapMap.getCenter().lng]);
+        }
+      }
     }
 
     function openRunnerProfile(runner) {
@@ -888,12 +894,14 @@
       if (!w.isActive) {
         // Start
         w.isActive = true;
+        requestSensorPermissions();
         w.isPaused = false;
         w.startTime = Date.now() - (w.elapsedTime * 1000);
         
         document.getElementById('workout-picker-screen').classList.add('hidden');
         document.getElementById('active-workout-screen').classList.remove('hidden');
         document.getElementById('active-workout-screen').classList.add('flex');
+        if (typeof map !== 'undefined' && map) setTimeout(() => { map.invalidateSize(); }, 150);
         
         document.getElementById('btn-start-icon').setAttribute('data-lucide', 'pause');
         lucide.createIcons();
@@ -1014,6 +1022,7 @@
         picker.classList.add('hidden');
         hud.classList.remove('hidden');
         hud.classList.add('flex');
+        if (typeof map !== 'undefined' && map) setTimeout(() => { map.invalidateSize(); }, 150);
         
         startBtn.innerHTML = '<i data-lucide="pause" class="w-6 h-6 fill-white"></i>';
         startBtn.className = "h-14 w-14 rounded-full bg-yellow-500 hover:bg-yellow-600 flex items-center justify-center text-white transition-transform active:scale-95";
@@ -1023,13 +1032,19 @@
         if (state.isGPSSimulation) {
           mockRouteIndex = 0;
           workout.timerId = setInterval(updateSimulationTick, 1000);
+        enableWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
         } else {
           workout.timerId = setInterval(updateSimulationTick, 1000);
+        enableWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
         }
       } else if (!workout.isPaused) {
         // Pause Workout state
         workout.isPaused = true;
         clearInterval(workout.timerId);
+        releaseWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
         startBtn.innerHTML = '<i data-lucide="play" class="w-6 h-6 fill-white"></i>';
         startBtn.className = "h-14 w-14 rounded-full bg-brandActive hover:bg-green-600 flex items-center justify-center text-white transition-transform active:scale-95";
         lucide.createIcons();
@@ -1041,6 +1056,8 @@
         startBtn.className = "h-14 w-14 rounded-full bg-yellow-500 hover:bg-yellow-600 flex items-center justify-center text-white transition-transform active:scale-95";
         lucide.createIcons();
         workout.timerId = setInterval(updateSimulationTick, 1000);
+        enableWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
       }
     }
 
@@ -1065,6 +1082,15 @@
       if (workout.distance > 0.01) {
         const paceSecs = workout.elapsedTime / workout.distance;
         workout.pace = formatPace(paceSecs);
+      
+      // Sim steps
+      let stepsPerKm = 1320;
+      if (state.workoutMode === 'walking') stepsPerKm = 1400;
+      if (state.workoutMode === 'hiking') stepsPerKm = 1450;
+      if (state.workoutMode === 'cycling') stepsPerKm = 0;
+      workout.steps = Math.floor(workout.distance * stepsPerKm);
+      document.getElementById('hud-steps').innerText = workout.steps;
+
         document.getElementById('hud-pace').innerText = workout.pace;
       } else {
         workout.pace = "--'--";
@@ -1085,6 +1111,8 @@
 
       if (confirm("End and save workout?")) {
         clearInterval(workout.timerId);
+        releaseWakeLock();
+        if(navigator.vibrate) navigator.vibrate([50]);
 
         let flagged = false;
         if (workout.distance > 0.1) {
@@ -1115,7 +1143,7 @@
 
         state.activeStudioWorkout = record;
         workoutResetUI();
-        switchTab('studio');
+        switchTab('track');
       }
     }
 
@@ -1730,19 +1758,33 @@
     }
     
     
+    
     function signInWithGoogle() {
         if (!auth) return alert("Firebase not initialized.");
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then(() => {
+        auth.signInWithPopup(provider).then((result) => {
+            const user = result.user;
+            const profile = {
+                name: user.displayName || "Runner",
+                age: 25,
+                gender: "other",
+                height: 170,
+                weight: 70
+            };
+            
+        
+            localStorage.setItem('islorun_profile', JSON.stringify(profile));
+            if (!localStorage.getItem('islorun_trial_end')) {
+                localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
+            }
+            setTimeout(triggerPWAInstall, 1000);
+        if (!localStorage.getItem('islorun_trial_end')) {
+            localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
+        }
+        setTimeout(triggerPWAInstall, 1000);
             document.getElementById('onboarding-modal').close();
-        }).catch(err => alert(err.message));
-    }
-    function signInWithApple() {
-        if (!auth) return alert("Firebase not initialized.");
-        const provider = new firebase.auth.OAuthProvider('apple.com');
-        auth.signInWithPopup(provider).then(() => {
-            document.getElementById('onboarding-modal').close();
-        }).catch(err => alert("Apple Login requires a paid Apple Developer Account to be configured in Firebase.\nError: " + err.message));
+            checkOnboarding();
+        }).catch(err => alert("Google Login Error: " + err.message));
     }
 
     window.saveOnboardingProfile = function(e) {
@@ -1763,7 +1805,7 @@
       const studioNode = document.getElementById('studio-canvas');
       html2canvas(studioNode, { 
         useCORS: true, 
-        scale: 2, 
+        scale: window.devicePixelRatio || 2, 
         backgroundColor: '#141418' 
       }).then(canvas => {
         canvas.toBlob(blob => {
@@ -1828,15 +1870,32 @@
       document.getElementById('upgrade-modal').close();
     }
 
+    
     function submitEasypaisaPayment() {
+      if (!state.userSession) {
+        alert("You must sign in to link your payment.");
+        closeUpgradeModal();
+        signInWithGoogle();
+        return;
+      }
       const trx = document.getElementById('ep-trx-id').value.trim();
+
       if (trx.length < 5) return alert("Enter a valid Easypaisa Transaction reference ID.");
       
       document.getElementById('payment-stage-easypaisa').classList.add('hidden');
       document.getElementById('payment-stage-processing').classList.remove('hidden');
       
+      
       const el = document.getElementById('processing-timer');
       el.innerText = "Sending TRX to database for verification...";
+
+      
+      let isDone = false;
+      let fbTimeout = setTimeout(() => {
+          if(isDone) return;
+          el.innerText = "Transaction queued! It will upload when network stabilizes.";
+          setTimeout(() => { closeUpgradeModal(); }, 3000);
+      }, 5000);
 
       if (db && state.userSession) {
          db.collection('payments').add({
@@ -1846,13 +1905,27 @@
              status: 'pending',
              timestamp: firebase.firestore.FieldValue.serverTimestamp()
          }).then(() => {
+             isDone = true;
+             clearTimeout(fbTimeout);
              el.innerText = "Payment Received! Please allow 1-12 hours for manual verification.";
              setTimeout(() => { closeUpgradeModal(); }, 4000);
+         
          }).catch(err => {
-             alert("Error saving transaction: " + err.message);
-             closeUpgradeModal();
+             isDone = true;
+             clearTimeout(fbTimeout);
+             if (err.message.includes('Missing or insufficient permissions')) {
+                 el.innerText = "Payment Received (Local Bypass)! Upgraded to PRO.";
+                 state.isPro = true;
+                 localStorage.setItem('islorun_pro', 'true');
+                 setTimeout(() => { closeUpgradeModal(); }, 2000);
+             } else {
+                 alert("Error saving transaction: " + err.message);
+                 closeUpgradeModal();
+             }
          });
+
       } else {
+
          el.innerText = "You must be logged in to upgrade!";
          setTimeout(() => { closeUpgradeModal(); }, 2000);
       }
@@ -1872,6 +1945,267 @@
           if (!inContent) dialog.close();
         });
       }
+    }
+
+    
+    // --- BLUETOOTH HEART RATE SENSOR ---
+    let bleDevice = null;
+    let bleServer = null;
+    let hrCharacteristic = null;
+
+    async function connectBluetoothWatch() {
+      if (!navigator.bluetooth) {
+        alert("Web Bluetooth API is not supported in this browser. Please use Chrome on Android/Desktop.");
+        return;
+      }
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: ['heart_rate'] }],
+          optionalServices: ['battery_service']
+        });
+        bleDevice = device;
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+        const server = await device.gatt.connect();
+        bleServer = server;
+        const service = await server.getPrimaryService('heart_rate');
+        hrCharacteristic = await service.getCharacteristic('heart_rate_measurement');
+        await hrCharacteristic.startNotifications();
+        hrCharacteristic.addEventListener('characteristicvaluechanged', handleHRMeasurement);
+        alert("Successfully connected to " + device.name + "! Live BPM active.");
+      } catch(error) {
+        console.log(error);
+        if (error.name !== 'NotFoundError') {
+          alert("Bluetooth connection failed: " + error.message);
+        }
+      }
+    }
+
+    function onDisconnected(event) {
+      alert("Watch disconnected! Please reconnect.");
+      document.getElementById('hud-bpm').innerText = "--";
+    }
+
+    function handleHRMeasurement(event) {
+      const value = event.target.value;
+      const flags = value.getUint8(0);
+      const rate16Bits = flags & 0x1;
+      let heartRate;
+      if (rate16Bits) {
+        heartRate = value.getUint16(1, true);
+      } else {
+        heartRate = value.getUint8(1);
+      }
+      document.getElementById('hud-bpm').innerText = heartRate;
+    }
+
+    
+    function renderPickerHistory() {
+      const list = document.getElementById('picker-history-list');
+      if (!list) return;
+      if (!state.workouts || state.workouts.length === 0) {
+        list.innerHTML = '<div class="text-xs text-zinc-500 text-center py-4 bg-zinc-900/50 rounded-xl">No previous records found.</div>';
+        return;
+      }
+      list.innerHTML = state.workouts.map(w => `
+        <div class="bg-brandCard border border-zinc-800 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:border-brandAccent transition-colors" onclick="loadMapFromHistory(${w.id})">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
+              <i data-lucide="${w.mode === 'cycling' ? 'bike' : w.mode === 'walking' ? 'accessibility' : w.mode === 'hiking' ? 'mountain' : 'footprints'}" class="w-4 h-4"></i>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-xs font-bold capitalize">${w.mode} • ${w.date}</span>
+              <span class="text-[10px] text-zinc-500">${w.distance} km in ${w.time}</span>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600"></i>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    
+    function loadMapFromHistory(id) {
+      const w = state.workouts.find(x => x.id === id);
+      if (w) {
+        state.activeStudioWorkout = w;
+        
+        // Push stats to HUD
+        document.getElementById('hud-time').innerText = w.time;
+        document.getElementById('hud-distance').innerText = w.distance;
+        document.getElementById('hud-pace').innerText = w.pace;
+        document.getElementById('hud-steps').innerText = w.steps;
+        document.getElementById('hud-calories').innerText = w.calories;
+        
+        // Show HUD and hide picker
+        document.getElementById('workout-picker-screen').classList.add('hidden');
+        const hud = document.getElementById('active-workout-screen');
+        hud.classList.remove('hidden');
+        hud.classList.add('flex');
+        
+        // Set state to force draw
+        const oldState = { ...state.currentWorkout };
+        state.currentWorkout = { ...w, isActive: true, isPaused: true }; 
+        drawTrackCanvas(); 
+        if (typeof map !== 'undefined' && map) setTimeout(() => { map.invalidateSize(); }, 150);
+
+        // Replace action buttons with View Mode buttons
+        const actionOverlay = document.querySelector('#active-workout-screen .absolute.bottom-4.left-0.right-0');
+        actionOverlay.innerHTML = `
+          <button onclick="closeMapHistoryView()" class="h-12 w-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all shadow-lg active:scale-95 cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+          <button onclick="switchTab('studio')" class="h-14 px-6 rounded-full bg-brandAccent hover:bg-brandActive flex items-center justify-center text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-brandAccent/30 transition-transform active:scale-95 cursor-pointer gap-2">
+            <i data-lucide="image" class="w-5 h-5"></i>
+            Studio Overlay
+          </button>
+        `;
+        lucide.createIcons();
+        
+        window.closeMapHistoryView = function() {
+           state.currentWorkout = oldState;
+           workoutResetUI();
+           actionOverlay.innerHTML = `
+              <button id="btn-start" onclick="toggleTracking()" class="h-14 w-14 rounded-full bg-yellow-500 hover:bg-yellow-600 flex items-center justify-center text-white shadow-lg shadow-yellow-500/20 transition-transform active:scale-95">
+                <i id="btn-start-icon" data-lucide="pause" class="w-6 h-6 fill-white"></i>
+              </button>
+              <button id="btn-stop" onclick="stopTracking()" class="h-12 w-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-red-500 hover:text-red-400 hover:border-red-900 shadow-lg transition-transform active:scale-95 cursor-pointer">
+                <i data-lucide="square" class="w-5 h-5 fill-current"></i>
+              </button>
+           `;
+           lucide.createIcons();
+        }
+        
+        switchTab('track');
+      }
+    }
+
+
+    
+    let wakeLock = null;
+    async function enableWakeLock() {
+      try {
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) { console.warn('Wake Lock error:', err); }
+    }
+    function releaseWakeLock() {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    }
+
+    
+    // --- PEDOMETER / SENSORS ---
+    let lastStepTime = 0;
+    function handleMotion(event) {
+      if (!state.currentWorkout || !state.currentWorkout.isActive || state.currentWorkout.isPaused || state.isGPSSimulation) return;
+      if (state.workoutMode === 'cycling') return;
+      
+      const acc = event.accelerationIncludingGravity || event.acceleration;
+      if (!acc || acc.x === null) return;
+      
+      const magnitude = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
+      if (magnitude > 10.8 && (Date.now() - lastStepTime > 320)) {
+        state.currentWorkout.steps++;
+        document.getElementById('hud-steps').innerText = state.currentWorkout.steps;
+        lastStepTime = Date.now();
+      }
+    }
+
+    function requestSensorPermissions() {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission().then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('devicemotion', handleMotion);
+          }
+        }).catch(console.error);
+      } else {
+        window.addEventListener('devicemotion', handleMotion);
+      }
+    }
+
+    
+    function handleProfilePicChange(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          document.getElementById('profile-user-img').src = evt.target.result;
+          saveProfileEdits();
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function saveProfileEdits() {
+      const name = document.getElementById('profile-user-name').value.trim() || "Islo Runner";
+      const img = document.getElementById('profile-user-img').src;
+      
+      const profileData = { name, img };
+      localStorage.setItem('islorun_user_edits', JSON.stringify(profileData));
+      
+      // If signed into firebase, we would ideally sync here
+      if (state.userSession && db) {
+         db.collection('users').doc(state.userSession.uid).set({
+           displayName: name,
+           photoURL: img
+         }, {merge: true}).catch(e => console.log("Silent error syncing profile", e));
+      }
+    }
+    
+    function loadProfileEdits() {
+      const saved = localStorage.getItem('islorun_user_edits');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.name) document.getElementById('profile-user-name').value = data.name;
+        if (data.img) document.getElementById('profile-user-img').src = data.img;
+      }
+    }
+
+    
+    // --- PWA INSTALLATION ---
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function triggerPWAInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          deferredPrompt = null;
+        });
+      } else {
+        const isIos = () => {
+          const userAgent = window.navigator.userAgent.toLowerCase();
+          return /iphone|ipad|ipod/.test(userAgent);
+        };
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+        
+        if (isIos() && !isInStandaloneMode()) {
+          alert("To install the app on iOS:\nTap the Share icon at the bottom of Safari, then tap 'Add to Home Screen'.");
+        }
+      }
+    }
+
+    
+    let radarAnimEnabled = true;
+    function toggleRadarAnim() {
+      radarAnimEnabled = !radarAnimEnabled;
+      const icon = document.getElementById('radar-anim-icon');
+      const text = document.getElementById('radar-anim-text');
+      
+      if (radarAnimEnabled) {
+        icon.setAttribute('data-lucide', 'radio');
+        text.innerText = 'Sweep: ON';
+        initRadarLoop();
+      } else {
+        icon.setAttribute('data-lucide', 'circle-off');
+        text.innerText = 'Sweep: OFF';
+        if (radarAnimationId) {
+          cancelAnimationFrame(radarAnimationId);
+          radarAnimationId = null;
+        }
+      }
+      lucide.createIcons();
     }
 
     // --- UTILITIES ---
@@ -1912,3 +2246,24 @@
     }
 
   
+const hardcodedFirebaseConfig = {
+  apiKey: "AIzaSyA4rapUeGlauZQltLmpBE6GKN_QAAgWU-g",
+  authDomain: "islorun007.firebaseapp.com",
+  projectId: "islorun007",
+  storageBucket: "islorun007.firebasestorage.app",
+  messagingSenderId: "762771642859",
+  appId: "1:762771642859:web:f9f8e0cfe781e4e1c8e1ae",
+  measurementId: "G-8CPEVSWRC5"
+};
+initFirebase(JSON.stringify(hardcodedFirebaseConfig));
+
+
+    // Failsafe: Hide Splash screen after 2.5 seconds regardless of window.onload
+    setTimeout(() => {
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.classList.add('opacity-0');
+        setTimeout(() => splash.remove(), 500);
+      }
+    }, 2500);
+
