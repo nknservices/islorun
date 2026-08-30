@@ -1520,7 +1520,7 @@
       ctx.stroke();
       
       // Other runners (radar dots)
-      if (!state.ghostMode) {
+      if (!state.ghostMode && !state.radarScanning) {
         mockRunners.forEach(runner => {
           const bearing = (runner.id * 1.8) % (2 * Math.PI);
           const range = (runner.id * 0.16 + 0.12) * maxRadius;
