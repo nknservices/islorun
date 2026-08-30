@@ -632,6 +632,9 @@
             <div class="flex-1 min-w-0 flex flex-col">
               <div class="flex items-center gap-2">
                 <input type="text" id="profile-user-name" class="font-extrabold text-sm truncate bg-transparent border-b border-dashed border-zinc-700 outline-none w-full max-w-[120px] text-white focus:border-brandAccent" value="Islo Runner" onblur="saveProfileEdits()">
+                <button onclick="document.getElementById('profile-user-name').focus()" class="text-zinc-500 hover:text-brandAccent transition-colors">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
                 <span id="settings-pro-pill" class="hidden px-2 py-0.5 rounded-full bg-gradient-to-r from-brandAccent to-brandActive text-[8px] font-black uppercase text-black">PRO</span>
               </div>
               <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p>
@@ -1523,7 +1526,8 @@
            snapMarkers.push(L.marker([center[0] + latOffset, center[1] + lngOffset], {icon: icon}).addTo(snapMap));
         });
     }
-\n    function toggleGhostMode() {
+
+    function toggleGhostMode() {
       state.ghostMode = !state.ghostMode;
       const icon = document.getElementById('ghost-mode-icon');
       const text = document.getElementById('ghost-mode-text');
