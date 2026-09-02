@@ -534,7 +534,7 @@
       <div id="tab-studio" class="tab-content flex-col h-full overflow-y-auto gap-0">
 
         <!-- Canvas: full-width, fixed photo, only badge moves -->
-        <div id="studio-canvas" class="w-full bg-[#0a0a0c] relative overflow-hidden select-none shrink-0" style="aspect-ratio:9/16;border-radius:0!important;touch-action:none;">
+        <div id="studio-canvas" class="w-full max-h-[75vh] bg-[#0a0a0c] relative overflow-hidden select-none shrink-0" style="aspect-ratio:9/16;border-radius:0!important;touch-action:none;">
 
           <!-- LOCKED background: pointer-events none, always covers canvas -->
           <div id="studio-bg-overlay" class="absolute inset-0 w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;background-size:cover;background-repeat:no-repeat;background-position:center center;background-color:#0a0a0c;"></div>
@@ -1118,6 +1118,22 @@
       checkLegalConsent();
 
       // Register PWA service worker
+      
+    // --- FORCE PWA UPDATE ---
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('New update available! Reloading...');
+              window.location.reload();
+            }
+          });
+        });
+      });
+    }
+
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
       }
@@ -2057,7 +2073,7 @@
         const canvas = document.getElementById('studio-canvas');
         if (canvas) {
           const ratio = img.naturalWidth / img.naturalHeight;
-          const clamped = Math.max(9/16, Math.min(1/1, ratio));
+          const clamped = Math.max(9/16, Math.min(16/9, ratio)); // Allow full 16:9 landscape to 9:16 portrait
           canvas.style.aspectRatio = clamped.toFixed(4) + ' / 1';
         }
         setStudioBg('image', imageUrl);
