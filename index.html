@@ -531,69 +531,85 @@
       </div>
 
       <!-- 4. PHOTO STUDIO TAB -->
-      <div id="tab-studio" class="tab-content flex-col h-full overflow-y-auto p-4 gap-4">
-        <div class="flex flex-col gap-1.5 select-none">
-          <h2 class="text-sm font-bold text-zinc-300">islorun Photo Studio</h2>
-          <p class="text-xs text-zinc-550 leading-normal">Overlay route telemetry onto photos. Drag stats badge anywhere. Pinch to resize. Tap text to edit quotes/headers!</p>
-        </div>
+      <div id="tab-studio" class="tab-content flex-col h-full overflow-y-auto gap-0">
 
-        <!-- Dynamic Studio Canvas Container -->
-        <div id="studio-canvas" class="h-[60vh] max-h-[600px] w-auto bg-[#141418] relative overflow-hidden shadow-lg select-none mx-auto shrink-0" style="aspect-ratio:16/9;border-radius:0!important;">
-          <div id="studio-bg-overlay" class="absolute inset-0 bg-center w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;background-size:cover;background-repeat:no-repeat;"></div>
-          
-          <!-- Draggable Stats Badge -->
-          <div id="drag-badge" class="absolute top-[10%] left-[10%] min-w-[160px] cursor-grab active:cursor-grabbing z-40 select-none">
-            <!-- Badge content injected here dynamically -->
+        <!-- Canvas: full-width, fixed photo, only badge moves -->
+        <div id="studio-canvas" class="w-full bg-[#0a0a0c] relative overflow-hidden select-none shrink-0" style="aspect-ratio:16/9;border-radius:0!important;touch-action:none;">
+
+          <!-- LOCKED background: pointer-events none, always covers canvas -->
+          <div id="studio-bg-overlay" class="absolute inset-0 w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;background-size:cover;background-repeat:no-repeat;background-position:center center;background-color:#0a0a0c;"></div>
+
+          <!-- First-time hint overlay -->
+          <div id="studio-hint" class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/65 backdrop-blur-sm transition-opacity duration-500">
+            <i data-lucide="move" class="w-9 h-9 text-brandAccent"></i>
+            <div class="text-center px-6">
+              <p class="text-white font-black text-sm">Drag the stats card anywhere</p>
+              <p class="text-zinc-400 text-xs mt-1">Pinch or use + / − to resize · Tap text to edit</p>
+              <p class="text-zinc-500 text-xs mt-1">Upload your own photo below</p>
+            </div>
+            <div class="w-6 h-[2px] bg-brandAccent/60 rounded-full"></div>
+            <p class="text-zinc-500 text-[10px]">Tap anywhere to start</p>
           </div>
 
-          <!-- Free Tier Watermark -->
-          <div id="studio-watermark" class="absolute bottom-2 right-3 font-semibold text-[8px] tracking-wider text-white/40 uppercase z-30 flex items-center gap-1 select-none pointer-events-none bg-black/35 py-0.5 px-1.5 rounded">
-            <span>islorun / get pro to unlock</span>
+          <!-- Stats badge — ONLY moveable element, centred by default -->
+          <div id="drag-badge" class="absolute cursor-grab active:cursor-grabbing z-40 select-none" style="top:50%;left:50%;transform:translate(-50%,-50%) scale(1);">
           </div>
-        </div>
 
-        <!-- Background Options: Presets & Upload -->
-        <div class="flex flex-col gap-2.5">
-          <div class="flex justify-between items-center select-none">
-            <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Canvas Background</span>
-            <label class="cursor-pointer text-xs font-bold text-brandAccent hover:underline flex items-center gap-1">
-              <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
-              <span>Upload Custom Photo</span>
-              <input type="file" id="bg-upload-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
-            </label>
+          <!-- Badge scale +/- buttons -->
+          <div class="absolute top-2 right-2 z-50 flex flex-col gap-1" id="badge-scale-controls">
+            <button onclick="event.stopPropagation();adjustBadgeScale(0.12)" class="w-8 h-8 rounded-full bg-black/70 text-white text-lg font-black flex items-center justify-center border border-white/20 active:scale-90 select-none">+</button>
+            <button onclick="event.stopPropagation();adjustBadgeScale(-0.12)" class="w-8 h-8 rounded-full bg-black/70 text-white text-lg font-black flex items-center justify-center border border-white/20 active:scale-90 select-none">−</button>
           </div>
-          
-          <!-- Background Presets Scroll -->
-          <div class="flex gap-2.5 overflow-x-auto pb-1 select-none">
-            <button onclick="setStudioBg('checkerboard', '')" class="flex-shrink-0 w-14 h-14 rounded-xl border border-zinc-805 bg-checkerboard relative transition-all" title="Transparent Grid"></button>
-            <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-orange-500 via-pink-500 to-indigo-600')" class="flex-shrink-0 w-14 h-14 rounded-xl border border-zinc-850 bg-gradient-to-br from-orange-500 via-pink-500 to-indigo-600 transition-all"></button>
-            <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-500')" class="flex-shrink-0 w-14 h-14 rounded-xl border border-zinc-850 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-500 transition-all"></button>
-            <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-emerald-400 via-slate-655 to-indigo-900')" class="flex-shrink-0 w-14 h-14 rounded-xl border border-zinc-850 bg-gradient-to-br from-emerald-400 via-slate-655 to-indigo-900 transition-all"></button>
-            <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-zinc-900 via-zinc-955 to-black')" class="flex-shrink-0 w-14 h-14 rounded-xl border border-zinc-850 bg-gradient-to-br from-zinc-900 via-zinc-955 to-black transition-all"></button>
+
+          <!-- Watermark -->
+          <div id="studio-watermark" class="absolute bottom-2 left-2 font-semibold text-[8px] tracking-wider text-white/35 uppercase z-30 select-none pointer-events-none bg-black/30 py-0.5 px-1.5 rounded">
+            <span>islorun</span>
           </div>
         </div>
 
-        <!-- Switcher Carousel: 10 Overlays -->
-        <div class="flex flex-col gap-2.5">
-          <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider select-none" id="templates-count-header">Stat Overlay Switcher (10 Templates)</span>
-          <div class="flex gap-2.5 overflow-x-auto pb-2 select-none font-sans" id="templates-list">
-            <!-- badge layouts injected by JS -->
-          </div>
-        </div>
+        <!-- Controls below canvas -->
+        <div class="flex flex-col gap-4 p-4">
 
-        <!-- Export & Share Buttons -->
-        <div class="grid grid-cols-2 gap-3 mt-1 pb-6">
-          <button id="studio-clear-route-btn" onclick="clearStudioRoute()" class="py-3 px-4 border border-zinc-800 rounded-xl bg-zinc-900 text-zinc-400 hover:text-white font-bold text-sm transition-all flex items-center justify-center gap-2">
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-            Reset
-          </button>
-          <button onclick="exportStudioImage()" class="py-3 px-4 rounded-xl bg-gradient-to-r from-brandAccent to-brandActive text-black font-black text-sm transition-all shadow-[0_4px_12px_rgba(236,72,153,0.25)] hover:brightness-110 flex items-center justify-center gap-2">
-            <i data-lucide="download" class="w-4 h-4"></i>
-            Save / Share
-          </button>
+          <!-- Upload + Preset backgrounds -->
+          <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Background</span>
+              <label class="cursor-pointer text-xs font-bold text-brandAccent flex items-center gap-1.5 bg-brandAccent/10 px-3 py-1.5 rounded-lg border border-brandAccent/30 active:scale-95 transition-transform">
+                <i data-lucide="image-plus" class="w-3.5 h-3.5"></i>
+                <span>Upload Photo</span>
+                <input type="file" id="bg-upload-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+              </label>
+            </div>
+            <div class="flex gap-2 overflow-x-auto pb-1 select-none">
+              <button onclick="setStudioBg('checkerboard', '')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-checkerboard active:scale-95 transition-transform" title="Transparent"></button>
+              <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-orange-500 via-pink-500 to-indigo-600')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-gradient-to-br from-orange-500 via-pink-500 to-indigo-600 active:scale-95 transition-transform"></button>
+              <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-500')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-500 active:scale-95 transition-transform"></button>
+              <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-emerald-400 via-slate-655 to-indigo-900')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-gradient-to-br from-emerald-400 via-slate-655 to-indigo-900 active:scale-95 transition-transform"></button>
+              <button onclick="setStudioBg('gradient', 'bg-gradient-to-br from-zinc-900 via-zinc-955 to-black')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-gradient-to-br from-zinc-900 via-zinc-955 to-black active:scale-95 transition-transform"></button>
+              <button onclick="setStudioBg('image','https://images.unsplash.com/photo-1552674605-db6aea4bc09c?w=800&q=80')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-cover bg-center active:scale-95 transition-transform" style="background-image:url('https://images.unsplash.com/photo-1552674605-db6aea4bc09c?w=80&q=60')"></button>
+              <button onclick="setStudioBg('image','https://images.unsplash.com/photo-1571019613914-85f342c6a11e?w=800&q=80')" class="flex-shrink-0 w-12 h-12 rounded-lg border border-zinc-700 bg-cover bg-center active:scale-95 transition-transform" style="background-image:url('https://images.unsplash.com/photo-1571019613914-85f342c6a11e?w=80&q=60')"></button>
+            </div>
+          </div>
+
+          <!-- Overlay templates -->
+          <div class="flex flex-col gap-2">
+            <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider" id="templates-count-header">Stat Overlays</span>
+            <div class="flex gap-2 overflow-x-auto pb-2 select-none font-sans" id="templates-list"></div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="grid grid-cols-2 gap-3 pb-6">
+            <button id="studio-clear-route-btn" onclick="clearStudioRoute()" class="py-3 px-4 border border-zinc-800 rounded-xl bg-zinc-900 text-zinc-400 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              Reset
+            </button>
+            <button onclick="exportStudioImage()" class="py-3 px-4 rounded-xl bg-gradient-to-r from-brandAccent to-brandActive text-black font-black text-sm shadow-[0_4px_12px_rgba(236,72,153,0.25)] flex items-center justify-center gap-2 active:scale-95 transition-transform">
+              <i data-lucide="share-2" class="w-4 h-4"></i>
+              Save & Share
+            </button>
+          </div>
         </div>
       </div>
-
 
       <!-- 5. PROFILE & SETTINGS TAB -->
       <div id="tab-settings" class="tab-content flex-col h-full overflow-y-auto p-5 gap-6">
@@ -2014,28 +2030,47 @@
       state.studioBg = { type, value };
       const overlay = document.getElementById('studio-bg-overlay');
       const canvas = document.getElementById('studio-canvas');
+      // Background is always fixed — never translates or scales
+      overlay.style.transform = 'none';
       overlay.style.backgroundImage = 'none';
       canvas.className = canvas.className.replace(/\bbg-gradient-to-\S+/g, '');
       canvas.classList.remove('bg-checkerboard');
-
       if (type === 'gradient') {
         canvas.classList.add(...value.split(' '));
       } else if (type === 'checkerboard') {
         canvas.classList.add('bg-checkerboard');
       } else {
-        overlay.style.backgroundImage = `url('${value}')`;
+        overlay.style.backgroundImage = 'url("' + value + '")';
+        overlay.style.backgroundSize = 'cover';
+        overlay.style.backgroundPosition = 'center center';
+        overlay.style.backgroundRepeat = 'no-repeat';
       }
     }
 
     function handleImageUpload(e) {
       const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          setStudioBg('image', evt.target.result);
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const dataUrl = evt.target.result;
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.getElementById('studio-canvas');
+          if (canvas) {
+            const ratio = img.naturalWidth / img.naturalHeight;
+            const clamped = Math.max(9/16, Math.min(16/9, ratio));
+            canvas.style.aspectRatio = clamped.toFixed(4) + ' / 1';
+          }
+          setStudioBg('image', dataUrl);
+          // Centre badge after canvas resizes
+          setTimeout(() => {
+            badgePctLeft = 50; badgePctTop = 50; currentScale = 1.0;
+            applyBadgePosition();
+          }, 80);
         };
-        reader.readAsDataURL(file);
-      }
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
     }
 
     // 10 Templates (Template 3 removed, specific texts editable via contenteditable="true")
@@ -2438,11 +2473,9 @@
     function selectTemplate(index) {
       if(typeof index === 'undefined' || index === null) index = 0;
       const template = studioTemplates[index];
-      if (template.pro && !state.isPro) {
-        openUpgradeModal();
-        return;
-      }
+      if (template.pro && !state.isPro) { openUpgradeModal(); return; }
       state.selectedTemplate = index;
+      badgePctLeft = 50; badgePctTop = 50; currentScale = 1.0;
       buildTemplatesSelectorUI();
       renderBadge();
     }
@@ -2450,160 +2483,132 @@
     function renderBadge() {
       const workout = state.activeStudioWorkout || state.workouts[0] || null;
       if (!workout) return;
-
       const template = studioTemplates[state.selectedTemplate];
       const badge = document.getElementById('drag-badge');
       badge.innerHTML = template.html(workout);
+      if (typeof applyBadgePosition === 'function') applyBadgePosition();
     }
 
-    // --- DRAG AND RESIZE ENGINE ---
-    let bgTx = 0, bgTy = 0, bgScale = 1.0;
+    // --- BADGE DRAG & PINCH ENGINE (background is always locked) ---
+    // Badge position stored as % of canvas for export accuracy
+    let badgePctLeft = 50, badgePctTop = 50;
+
+    function applyBadgePosition() {
+      const b = document.getElementById('drag-badge');
+      if (!b) return;
+      b.style.left = badgePctLeft + '%';
+      b.style.top = badgePctTop + '%';
+      b.style.transform = 'translate(-50%,-50%) scale(' + currentScale + ')';
+    }
+
+    function adjustBadgeScale(delta) {
+      currentScale = Math.max(0.3, Math.min(3.5, currentScale + delta));
+      applyBadgePosition();
+    }
+
+    function dismissHint() {
+      const hint = document.getElementById('studio-hint');
+      if (hint && !hint.classList.contains('hidden')) {
+        hint.style.opacity = '0';
+        hint.style.transition = 'opacity 0.4s';
+        setTimeout(() => hint.classList.add('hidden'), 400);
+      }
+    }
     
     function initDragBadgeControls() {
-      const badge = document.getElementById('drag-badge');
+      // Reset badge to centre
+      badgePctLeft = 50; badgePctTop = 50; currentScale = 1.0;
+      applyBadgePosition();
+
+      // Reset background: always locked, no transform
+      const ov = document.getElementById('studio-bg-overlay');
+      if (ov) ov.style.transform = 'none';
+
+      // Clone canvas to wipe old listeners
       const canvas = document.getElementById('studio-canvas');
-      const overlay = document.getElementById('studio-bg-overlay');
+      const fresh = canvas.cloneNode(true);
+      canvas.parentNode.replaceChild(fresh, canvas);
+      const C = document.getElementById('studio-canvas');
 
-      let isDraggingBadge = false;
-      let startX = 0, startY = 0;
-      let isPinchingBadge = false;
-      let startPinchDistBadge = 0, startScaleBadge = 1.0;
-      
-      let isDraggingBg = false;
-      let bgStartX = 0, bgStartY = 0;
-      let isPinchingBg = false;
-      let startPinchDistBg = 0, startScaleBg = 1.0;
+      let isDragging = false, startX = 0, startY = 0;
+      let isPinching = false, pinchDist0 = 0, scale0 = 1.0;
 
-      badge.style.transformOrigin = 'center center';
-      overlay.style.transformOrigin = 'center center';
-      // Reset background translation and scale when opening a new photo
-      bgTx = 0; bgTy = 0; bgScale = 1.0;
-      overlay.style.transform = 'translate(0px, 0px) scale(1.0)';
-      
-      // Stop old event listeners if any exist
-      const oldCanvas = canvas.cloneNode(true);
-      canvas.parentNode.replaceChild(oldCanvas, canvas);
-      const newCanvas = document.getElementById('studio-canvas');
-      const newBadge = document.getElementById('drag-badge');
+      function getPoint(e, idx) {
+        const src = e.touches ? e.touches[idx] : e;
+        return { x: src.clientX, y: src.clientY };
+      }
 
       function onStart(e) {
-        if (e.target.hasAttribute('contenteditable')) return; 
+        dismissHint();
+        if (e.target.closest('[contenteditable]')) return;
+        if (!e.target.closest('#drag-badge')) return; // only badge is interactive
 
-        if (e.target.closest('#drag-badge')) {
-          if (e.type === 'touchstart' && e.touches.length === 2) {
-            isPinchingBadge = true; isDraggingBadge = false;
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            startPinchDistBadge = Math.sqrt(dx * dx + dy * dy);
-            startScaleBadge = currentScale;
-            e.preventDefault();
-            return;
-          }
-          isDraggingBadge = true; isPinchingBadge = false;
-          const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-          const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-          const rect = newBadge.getBoundingClientRect();
-          startX = clientX - rect.left; startY = clientY - rect.top;
-          if (e.type === 'touchstart') e.preventDefault();
-        } else if (e.target.closest('#studio-canvas')) {
-          if (e.type === 'touchstart' && e.touches.length === 2) {
-            isPinchingBg = true; isDraggingBg = false;
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            startPinchDistBg = Math.sqrt(dx * dx + dy * dy);
-            startScaleBg = bgScale;
-            e.preventDefault();
-            return;
-          }
-          isDraggingBg = true; isPinchingBg = false;
-          const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-          const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-          bgStartX = clientX - bgTx; bgStartY = clientY - bgTy;
-          if (e.type === 'touchstart') e.preventDefault();
-        }
-      }
-
-      function updateBgTransform() {
-          const ov = document.getElementById('studio-bg-overlay');
-          ov.style.transform = 'translate(' + bgTx + 'px, ' + bgTy + 'px) scale(' + bgScale + ')';
-      }
-
-      function onMove(e) {
-        if (e.type === 'touchmove' && e.touches.length === 2) {
-          if (isPinchingBadge) {
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const currentDist = Math.sqrt(dx * dx + dy * dy);
-            if (startPinchDistBadge > 5) {
-              const factor = currentDist / startPinchDistBadge;
-              currentScale = Math.max(0.4, Math.min(3.0, startScaleBadge * factor));
-              newBadge.style.transform = 'scale(' + currentScale + ')';
-            }
-          } else if (isPinchingBg) {
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const currentDist = Math.sqrt(dx * dx + dy * dy);
-            if (startPinchDistBg > 5) {
-              const factor = currentDist / startPinchDistBg;
-              bgScale = Math.max(0.2, Math.min(5.0, startScaleBg * factor));
-              updateBgTransform();
-            }
-          }
+        if (e.touches && e.touches.length === 2) {
+          // Two-finger pinch to scale badge
+          isPinching = true; isDragging = false;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          pinchDist0 = Math.sqrt(dx*dx + dy*dy);
+          scale0 = currentScale;
           e.preventDefault();
           return;
         }
 
-        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        isDragging = true; isPinching = false;
+        const p = getPoint(e, 0);
+        const badge = document.getElementById('drag-badge');
+        const br = badge.getBoundingClientRect();
+        startX = p.x - (br.left + br.width/2);
+        startY = p.y - (br.top  + br.height/2);
+        e.preventDefault();
+      }
 
-        if (isDraggingBadge) {
-          const canvasRect = newCanvas.getBoundingClientRect();
-          let left = clientX - canvasRect.left - startX;
-          let top = clientY - canvasRect.top - startY;
-          const maxLeft = canvasRect.width - newBadge.offsetWidth / 2;
-          const maxTop = canvasRect.height - newBadge.offsetHeight / 2;
-          left = Math.max(-newBadge.offsetWidth / 2, Math.min(left, maxLeft));
-          top = Math.max(-newBadge.offsetHeight / 2, Math.min(top, maxTop));
-          newBadge.style.left = ((left / canvasRect.width) * 100) + '%';
-          newBadge.style.top = ((top / canvasRect.height) * 100) + '%';
+      function onMove(e) {
+        if (e.touches && e.touches.length === 2 && isPinching) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (pinchDist0 > 5) {
+            currentScale = Math.max(0.3, Math.min(3.5, scale0 * (dist / pinchDist0)));
+            applyBadgePosition();
+          }
           e.preventDefault();
-        } else if (isDraggingBg) {
-          bgTx = clientX - bgStartX;
-          bgTy = clientY - bgStartY;
-          updateBgTransform();
-          e.preventDefault();
+          return;
         }
+        if (!isDragging) return;
+
+        const p = getPoint(e, 0);
+        const cr = C.getBoundingClientRect();
+        // Convert absolute pointer position to canvas-relative %
+        const rawLeft = p.x - startX - cr.left;
+        const rawTop  = p.y - startY - cr.top;
+        // Clamp so badge centre stays within canvas
+        badgePctLeft = Math.max(0, Math.min(100, (rawLeft / cr.width)  * 100));
+        badgePctTop  = Math.max(0, Math.min(100, (rawTop  / cr.height) * 100));
+        applyBadgePosition();
+        e.preventDefault();
       }
 
       function onEnd(e) {
         if (e.type === 'touchend') {
-          if (e.touches.length < 2) { isPinchingBadge = false; isPinchingBg = false; }
-          if (e.touches.length === 0) { isDraggingBadge = false; isDraggingBg = false; }
+          if ((e.touches||[]).length < 2) isPinching = false;
+          if ((e.touches||[]).length === 0) isDragging = false;
         } else {
-          isDraggingBadge = false; isDraggingBg = false;
+          isDragging = false;
         }
       }
 
-      newCanvas.addEventListener('mousedown', onStart);
-      document.addEventListener('mousemove', onMove, { passive: false });
-      document.addEventListener('mouseup', onEnd);
+      C.addEventListener('mousedown',  onStart);
+      C.addEventListener('touchstart', onStart, { passive: false });
+      document.addEventListener('mousemove',  onMove, { passive: false });
+      document.addEventListener('touchmove',  onMove, { passive: false });
+      document.addEventListener('mouseup',    onEnd);
+      document.addEventListener('touchend',   onEnd);
 
-      newCanvas.addEventListener('touchstart', onStart, { passive: false });
-      document.addEventListener('touchmove', onMove, { passive: false });
-      document.addEventListener('touchend', onEnd);
-
-      newCanvas.addEventListener('wheel', (e) => {
+      // Mouse-wheel scales badge only
+      C.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const speed = 0.05;
-        if (e.target.closest('#drag-badge')) {
-          if (e.deltaY < 0) currentScale = Math.min(3.0, currentScale + speed);
-          else currentScale = Math.max(0.4, currentScale - speed);
-          newBadge.style.transform = 'scale(' + currentScale + ')';
-        } else {
-          if (e.deltaY < 0) bgScale = Math.min(5.0, bgScale + speed);
-          else bgScale = Math.max(0.2, bgScale - speed);
-          updateBgTransform();
-        }
+        adjustBadgeScale(e.deltaY < 0 ? 0.08 : -0.08);
       }, { passive: false });
     }
 
