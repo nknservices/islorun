@@ -361,7 +361,7 @@
               <span class="text-zinc-555 text-[8px] font-bold uppercase tracking-wider">Avg Pace</span>
               <div class="flex items-baseline gap-0.5 mt-0.5">
                 <span id="hud-pace" style="font-variant-numeric: tabular-nums;" class="text-sm font-black font-mono text-white">--'--</span>
-                <span class="text-[8px] text-zinc-550">/km</span>
+                <span class="text-[8px] text-zinc-550">min/km</span>
               </div>
             </div>
             <!-- Calories Burned -->
@@ -538,8 +538,8 @@
         </div>
 
         <!-- Dynamic Studio Canvas Container -->
-        <div id="studio-canvas" class="h-[60vh] max-h-[600px] w-auto bg-[#141418] relative overflow-hidden shadow-lg select-none mx-auto shrink-0" style="aspect-ratio:1/1;border-radius:0!important;">
-          <div id="studio-bg-overlay" class="absolute inset-0 bg-cover bg-no-repeat bg-center w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;"></div>
+        <div id="studio-canvas" class="h-[60vh] max-h-[600px] w-auto bg-[#141418] relative overflow-hidden shadow-lg select-none mx-auto shrink-0" style="aspect-ratio:16/9;border-radius:0!important;">
+          <div id="studio-bg-overlay" class="absolute inset-0 bg-center w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;background-size:cover;background-repeat:no-repeat;"></div>
           
           <!-- Draggable Stats Badge -->
           <div id="drag-badge" class="absolute top-[10%] left-[10%] min-w-[160px] cursor-grab active:cursor-grabbing z-40 select-none">
