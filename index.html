@@ -361,7 +361,7 @@
               <span class="text-zinc-555 text-[8px] font-bold uppercase tracking-wider">Avg Pace</span>
               <div class="flex items-baseline gap-0.5 mt-0.5">
                 <span id="hud-pace" style="font-variant-numeric: tabular-nums;" class="text-sm font-black font-mono text-white">--'--</span>
-                <span class="text-[8px] text-zinc-550">/ km</span>
+                <span class="text-[8px] text-zinc-550">min/km</span>
               </div>
             </div>
             <!-- Calories Burned -->
@@ -534,7 +534,7 @@
       <div id="tab-studio" class="tab-content flex-col h-full overflow-y-auto gap-0">
 
         <!-- Canvas: full-width, fixed photo, only badge moves -->
-        <div id="studio-canvas" class="w-full bg-[#0a0a0c] relative overflow-hidden select-none shrink-0" style="aspect-ratio:9/16;border-radius:0!important;touch-action:none;">
+        <div id="studio-canvas" class="w-full bg-[#0a0a0c] relative overflow-hidden select-none shrink-0" style="aspect-ratio:16/9;border-radius:0!important;touch-action:none;">
 
           <!-- LOCKED background: pointer-events none, always covers canvas -->
           <div id="studio-bg-overlay" class="absolute inset-0 w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;background-size:cover;background-repeat:no-repeat;background-position:center center;background-color:#0a0a0c;"></div>
@@ -831,7 +831,6 @@
       activeTab: 'track',
       workoutMode: 'running',
       isGPSSimulation: false,
-      weather: { temp: '--', humidity: '--', wind: '--', desc: '--', date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) },
       workouts: [],
       currentWorkout: {
         isActive: false,
@@ -1138,7 +1137,6 @@
       initDragBadgeControls();
       setupDialogFallback();
       setWorkoutMode('running');
-      fetchLiveWeather();
       setStudioBg('image', 'https://images.unsplash.com/photo-1552674605-db6aea4bc09c?w=400&q=80');
 
       // Setup initial canvas draw loop
@@ -1148,53 +1146,6 @@
     
     
     
-    
-    // --- LIVE WEATHER (Open-Meteo, no API key needed) ---
-    async function fetchLiveWeather() {
-      try {
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          const lat = pos.coords.latitude.toFixed(4);
-          const lon = pos.coords.longitude.toFixed(4);
-          const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
-            '&longitude=' + lon +
-            '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code' +
-            '&wind_speed_unit=kmh&timezone=auto';
-          const res = await fetch(url);
-          const data = await res.json();
-          const cur = data.current;
-          const wCode = cur.weather_code || 0;
-          const desc = wCode === 0 ? 'Clear' : wCode <= 3 ? 'Partly Cloudy' :
-                        wCode <= 48 ? 'Foggy' : wCode <= 67 ? 'Rainy' :
-                        wCode <= 77 ? 'Snowy' : wCode <= 82 ? 'Showers' : 'Stormy';
-          state.weather = {
-            temp: Math.round(cur.temperature_2m) + '°C',
-            humidity: Math.round(cur.relative_humidity_2m) + '%',
-            wind: Math.round(cur.wind_speed_10m) + ' km/h',
-            desc: desc,
-            date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-          };
-          // Update any visible weather fields in templates
-          updateWeatherInBadge();
-          console.log('[Weather]', state.weather);
-        }, () => {}, { enableHighAccuracy: false, maximumAge: 300000 });
-      } catch(e) { console.log('Weather fetch failed:', e); }
-    }
-
-    function updateWeatherInBadge() {
-      if (!state.weather) return;
-      const w = state.weather;
-      // Update live contenteditable spans if they are on screen
-      const elWeather = document.querySelector('[data-weather="desc"]');
-      const elHumidity = document.querySelector('[data-weather="humidity"]');
-      const elWind = document.querySelector('[data-weather="wind"]');
-      const elDate = document.querySelector('[data-weather="date"]');
-      if (elWeather) elWeather.innerText = w.desc + ' ' + w.temp;
-      if (elHumidity) elHumidity.innerText = w.humidity;
-      if (elWind) elWind.innerText = w.wind;
-      if (elDate) elDate.innerText = w.date;
-    }
-
     function checkLegalConsent() {
       if (localStorage.getItem('islorun_consent_accepted') !== 'true') {
         document.getElementById('legal-consent-overlay').classList.remove('hidden');
@@ -2059,7 +2010,7 @@
       state.activeStudioWorkout = {
         id: 'default',
         mode: 'running',
-        date: state.weather ? state.weather.date : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        date: 'Today',
         time: '00:19:30',
         elapsedSeconds: 1170,
         distance: 4.02,
@@ -2107,7 +2058,7 @@
           const canvas = document.getElementById('studio-canvas');
           if (canvas) {
             const ratio = img.naturalWidth / img.naturalHeight;
-            const clamped = Math.max(9/16, Math.min(1/1, ratio)); // portrait up to square
+            const clamped = Math.max(9/16, Math.min(16/9, ratio));
             canvas.style.aspectRatio = clamped.toFixed(4) + ' / 1';
           }
           setStudioBg('image', dataUrl);
@@ -2299,8 +2250,8 @@
                   <span contenteditable="true" class="font-extrabold text-white focus:outline-none focus:ring-1 focus:ring-white/20 rounded px-0.5">Sunny — 28°C</span>
                 </div>
                 <div class="flex flex-col gap-0.5 text-right text-zinc-300">
-                  <div>Humidity: <span data-weather="humidity" contenteditable="true" class="font-bold text-white focus:outline-none">${state.weather ? state.weather.humidity : '67%'}</span></div>
-                  <div>Wind: <span data-weather="wind" contenteditable="true" class="font-bold text-white focus:outline-none">${state.weather ? state.weather.wind : '9 km/h'}</span></div>
+                  <div>Humidity: <span contenteditable="true" class="font-bold text-white focus:outline-none">67%</span></div>
+                  <div>Wind: <span contenteditable="true" class="font-bold text-white focus:outline-none">9 km/h</span></div>
                 </div>
               </div>
               <div contenteditable="true" class="text-[8px] font-bold text-zinc-350 italic text-center leading-normal border-t border-white/20 pt-1.5 mt-0.5 focus:outline-none focus:ring-1 focus:ring-white/20 rounded px-1">
