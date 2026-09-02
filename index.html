@@ -2804,6 +2804,30 @@
         signInWithGoogle();
         return;
       }
+// ------------------------------------------------------------
+// Helper: manually set PRO status for the signed‑in user.
+// Usage (console or debugging): setProStatus(true, 30) // 30‑day PRO
+//                              setProStatus(false, 0) // revoke PRO
+// ------------------------------------------------------------
+function setProStatus(isPro, days) {
+  if (!db || !state.userSession) {
+    console.warn('Cannot set PRO – no Firebase DB or user logged in');
+    return;
+  }
+  const uid = state.userSession.uid;
+  const data = { isPro: !!isPro };
+  if (isPro && days > 0) {
+    const expireDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    data.proExpiresAt = firebase.firestore.Timestamp.fromDate(expireDate);
+  } else {
+    // Remove any existing expiration when revoking
+    data.proExpiresAt = firebase.firestore.FieldValue.delete();
+  }
+  db.collection('users').doc(uid).set(data, { merge: true })
+    .then(() => console.log('PRO status updated:', data))
+    .catch(err => console.error('Failed to update PRO status:', err));
+}
+
       const trx = document.getElementById('ep-trx-id').value.trim();
 
       if (trx.length < 5) return alert("Enter a valid Easypaisa Transaction reference ID.");
