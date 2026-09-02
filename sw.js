@@ -1,4 +1,4 @@
-const CACHE_NAME = 'islorun-cache-v2';
+const CACHE_NAME = 'islorun-cache-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

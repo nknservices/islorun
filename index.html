@@ -538,8 +538,8 @@
         </div>
 
         <!-- Dynamic Studio Canvas Container -->
-        <div id="studio-canvas" class="h-[60vh] max-h-[600px] w-auto aspect-[9/16] bg-[#141418] rounded-2xl relative overflow-hidden shadow-lg select-none mx-auto shrink-0">
-          <div id="studio-bg-overlay" class="absolute inset-0 bg-cover bg-no-repeat bg-center w-full h-full"></div>
+        <div id="studio-canvas" class="h-[60vh] max-h-[600px] w-auto bg-[#141418] relative overflow-hidden shadow-lg select-none mx-auto shrink-0" style="aspect-ratio:1/1;border-radius:0!important;">
+          <div id="studio-bg-overlay" class="absolute inset-0 bg-cover bg-no-repeat bg-center w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;"></div>
           
           <!-- Draggable Stats Badge -->
           <div id="drag-badge" class="absolute top-[10%] left-[10%] min-w-[160px] cursor-grab active:cursor-grabbing z-40 select-none">
@@ -1728,9 +1728,10 @@
               const p = JSON.parse(profileStr);
               if(p.weight) weight = parseFloat(p.weight);
           }
-          let met = 8.0; 
+          // Standard MET: Running 9.8, Cycling 7.5, Walking 3.8
+          let met = 9.8;
           if(state.workoutMode === 'cycling') met = 7.5;
-          if(state.workoutMode === 'walking') met = 3.5;
+          if(state.workoutMode === 'walking') met = 3.8;
           
           w.calories = Math.floor(met * weight * (w.elapsedTime / 3600));
           document.getElementById('hud-calories').innerText = w.calories;
@@ -1739,6 +1740,7 @@
         // Start GPS
         if (navigator.geolocation) {
           w.watchId = navigator.geolocation.watchPosition((pos) => {
+             if (pos.coords.accuracy > 20) return; // drop noisy fixes
              const latitude = pos.coords.latitude;
              const longitude = pos.coords.longitude;
              w.path.push({lat: latitude, lng: longitude});
@@ -1766,7 +1768,7 @@
               } else {
                   alert("GPS Error: " + err.message);
               }
-          }, { enableHighAccuracy: true });
+          }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
         }
         
         // Start step counter using DeviceMotion
@@ -2049,8 +2051,8 @@
               <span class="text-4xl font-black tracking-tight" style="-webkit-text-stroke: 1.5px white; color: transparent; text-shadow: 0 0 10px rgba(255,255,255,0.15);">${w.distance} KM</span>
             </div>
             
-            <svg class="w-14 h-14 text-white opacity-40 mx-auto filter drop-shadow-[0_0_3px_rgba(255,255,255,0.2)]" viewBox="0 0 100 100">
-              <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+            <svg class="w-14 h-14 text-white opacity-40 mx-auto filter drop-shadow-[0_0_3px_rgba(255,255,255,0.2)]" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+              <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
             </svg>
 
             <div class="flex flex-col gap-5 my-auto relative w-full text-left px-2">
@@ -2079,8 +2081,8 @@
             </div>
 
             <div class="flex items-end justify-between w-full mt-auto">
-              <svg class="w-12 h-12 text-yellow-500/60" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-12 h-12 text-yellow-500/60" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
               
               <div class="flex flex-col items-end gap-2.5 text-right pr-1">
@@ -2105,8 +2107,8 @@
               <span contenteditable="true" class="text-[7px] font-semibold text-zinc-305 tracking-wider focus:outline-none focus:ring-1 focus:ring-white/20 rounded px-1">STRONGER WITH EVERY STEP</span>
             </div>
 
-            <svg class="w-16 h-16 text-white opacity-60 mx-auto my-2 filter drop-shadow-[0_0_4px_rgba(255,255,255,0.25)]" viewBox="0 0 100 100">
-              <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+            <svg class="w-16 h-16 text-white opacity-60 mx-auto my-2 filter drop-shadow-[0_0_4px_rgba(255,255,255,0.25)]" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+              <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
             </svg>
 
             <div class="grid grid-cols-3 gap-2 text-center mb-3 pt-3 border-t border-white/20 w-full font-mono">
@@ -2149,8 +2151,8 @@
             </div>
 
             <div class="flex justify-between items-end mt-4">
-              <svg class="w-12 h-12 text-white/50" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-12 h-12 text-white/50" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
               
               <div class="self-end pr-1 pb-1">
@@ -2181,8 +2183,8 @@
 
             <div class="grid grid-cols-2 gap-3 my-auto pt-2 pb-2">
               <div class="flex items-center justify-center">
-                <svg class="w-16 h-16 text-white" viewBox="0 0 100 100">
-                  <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="4.5" stroke-dasharray="3,3" stroke-linecap="round" stroke-linejoin="round" />
+                <svg class="w-16 h-16 text-white" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                  <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-dasharray="3,3" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
                 </svg>
               </div>
 
@@ -2238,8 +2240,8 @@
             </div>
             
             <div class="p-4 flex flex-col items-center gap-3.5 bg-zinc-900/95">
-              <svg class="w-20 h-20 text-[#fc5200] filter drop-shadow-[0_2px_6px_rgba(252,82,0,0.35)]" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-20 h-20 text-[#fc5200] filter drop-shadow-[0_2px_6px_rgba(252,82,0,0.35)]" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
               
               <div class="grid grid-cols-3 gap-2 w-full border-t border-zinc-800 pt-3 text-center leading-none">
@@ -2279,8 +2281,8 @@
             </div>
             
             <div class="flex flex-col items-center gap-1.5">
-              <svg class="w-16 h-16 text-[#fc5200] filter drop-shadow-[0_0_3px_rgba(252,82,0,0.25)]" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-16 h-16 text-[#fc5200] filter drop-shadow-[0_0_3px_rgba(252,82,0,0.25)]" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
               <img src="./text%20only%20logo%20transparent.png" class="h-3 object-contain" alt="logo">
             </div>
@@ -2295,8 +2297,8 @@
         html: (w) => `
           <div class="flex flex-col justify-between items-center p-4 text-white select-none w-[200px] h-[340px] relative bg-transparent font-sans">
             <div class="my-auto flex items-center justify-center">
-              <svg class="w-24 h-24 text-[#fc5200] filter drop-shadow-[0_0_8px_rgba(252,82,0,0.45)]" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-24 h-24 text-[#fc5200] filter drop-shadow-[0_0_8px_rgba(252,82,0,0.45)]" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
             </div>
             
@@ -2334,8 +2336,8 @@
             </div>
             
             <div class="flex items-center gap-3">
-              <svg class="w-12 h-12 text-[#fc5200] shrink-0" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-12 h-12 text-[#fc5200] shrink-0" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
               
               <div class="flex-1 flex flex-col gap-1 text-left select-none leading-none">
@@ -2375,8 +2377,8 @@
             </div>
 
             <div class="my-auto flex items-center justify-center">
-              <svg class="w-28 h-28 text-[#fc5200] filter drop-shadow-[0_0_10px_rgba(252,82,0,0.5)]" viewBox="0 0 100 100">
-                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+              <svg class="w-28 h-28 text-[#fc5200] filter drop-shadow-[0_0_10px_rgba(252,82,0,0.5)]" viewBox="0 0 100 100"><defs><filter id="track-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <path d="${generateRouteSvgPath(w.path, 100, 100)}" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)" />
               </svg>
             </div>
 
@@ -2406,13 +2408,13 @@
         card.className = `flex-shrink-0 w-24 p-2.5 rounded-xl bg-brandCard border-2 ${borderClass} flex flex-col items-center justify-between text-center select-none transition-all hover:scale-95`;
         
         const lockIconSvg = `
-          <svg class="w-4 h-4 text-brandAccent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="w-4 h-4 text-brandAccent shrink-0" viewBox="0 0 24 24" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
         `;
         const eyeIconSvg = `
-          <svg class="w-4 h-4 text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="w-4 h-4 text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="#00ffcc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#track-glow)">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
