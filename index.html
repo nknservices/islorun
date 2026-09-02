@@ -1343,12 +1343,7 @@
 
     
     function loadProStatus() {
-      let isTrial = false;
-      const trialEnd = localStorage.getItem('islorun_trial_end');
-      if (trialEnd && Date.now() < parseInt(trialEnd)) {
-         isTrial = true;
-      }
-      state.isPro = (localStorage.getItem('islorun_pro') === 'true') || isTrial;
+      state.isPro = (localStorage.getItem('islorun_pro') === 'true');
 
       const upgradeBtn = document.getElementById('upgrade-trigger-btn');
       const headerPro = document.getElementById('header-pro-badge');
@@ -2711,13 +2706,7 @@
             
         
             localStorage.setItem('islorun_profile', JSON.stringify(profile));
-            if (!localStorage.getItem('islorun_trial_end')) {
-                localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
-            }
             setTimeout(triggerPWAInstall, 1000);
-        if (!localStorage.getItem('islorun_trial_end')) {
-            localStorage.setItem('islorun_trial_end', Date.now() + 3*24*60*60*1000);
-        }
         setTimeout(triggerPWAInstall, 1000);
             document.getElementById('onboarding-modal').close();
             checkOnboarding();
