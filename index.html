@@ -2851,10 +2851,8 @@
              isDone = true;
              clearTimeout(fbTimeout);
              if (err.message.includes('Missing or insufficient permissions')) {
-                 el.innerText = "Payment Received (Local Bypass)! Upgraded to PRO.";
-                 state.isPro = true;
-                 localStorage.setItem('islorun_pro', 'true');
-                 setTimeout(() => { closeUpgradeModal(); }, 2000);
+                 el.innerText = "Payment Queued! Awaiting manual verification.";
+                 setTimeout(() => { closeUpgradeModal(); }, 4000);
              } else {
                  alert("Error saving transaction: " + err.message);
                  closeUpgradeModal();
