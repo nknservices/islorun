@@ -531,10 +531,11 @@
       </div>
 
       <!-- 4. PHOTO STUDIO TAB -->
-      <div id="tab-studio" class="tab-content flex-col h-full overflow-y-auto gap-0">
+      <div id="tab-studio" class="tab-content flex-col h-full overflow-hidden bg-black gap-0">
 
         <!-- Canvas: full-width, fixed photo, only badge moves -->
-        <div id="studio-canvas" class="w-full max-h-[75vh] bg-[#0a0a0c] relative overflow-hidden select-none shrink-0" style="aspect-ratio:9/16;border-radius:0!important;touch-action:none;">
+        <div class="flex-1 w-full relative flex items-center justify-center p-2 min-h-0 bg-black">
+          <div id="studio-canvas" class="h-full w-auto max-w-full bg-[#0a0a0c] relative overflow-hidden select-none shrink-0 shadow-lg" style="aspect-ratio:9/16;border-radius:0!important;touch-action:none;">
 
           <!-- LOCKED background: pointer-events none, always covers canvas -->
           <div id="studio-bg-overlay" class="absolute inset-0 w-full h-full" style="pointer-events:none;user-select:none;-webkit-user-select:none;background-size:cover;background-repeat:no-repeat;background-position:center center;background-color:#0a0a0c;"></div>
@@ -566,9 +567,10 @@
             <span>islorun</span>
           </div>
         </div>
+        </div>
 
-        <!-- Controls below canvas -->
-        <div class="flex flex-col gap-4 p-4">
+        <!-- Controls below canvas (Fixed to bottom) -->
+        <div class="w-full shrink-0 flex flex-col gap-3 px-3 py-4 bg-brandDark border-t border-zinc-900 z-10 overflow-y-auto max-h-[45vh] shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
 
           <!-- Upload + Preset backgrounds -->
           <div class="flex flex-col gap-2">
@@ -598,7 +600,7 @@
           </div>
 
           <!-- Action buttons -->
-          <div class="grid grid-cols-2 gap-3 pb-6">
+          <div class="grid grid-cols-2 gap-3 pb-2">
             <button id="studio-clear-route-btn" onclick="clearStudioRoute()" class="py-3 px-4 border border-zinc-800 rounded-xl bg-zinc-900 text-zinc-400 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
               <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
               Reset
