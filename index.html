@@ -1152,13 +1152,21 @@
     // --- LIVE WEATHER (Open-Meteo, no API key needed) ---
     async function fetchLiveWeather() {
       try {
-        const doFetch = async (lat, lon) => {
-          const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&timezone=auto';
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const lat = pos.coords.latitude.toFixed(4);
+          const lon = pos.coords.longitude.toFixed(4);
+          const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+            '&longitude=' + lon +
+            '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code' +
+            '&wind_speed_unit=kmh&timezone=auto';
           const res = await fetch(url);
           const data = await res.json();
           const cur = data.current;
           const wCode = cur.weather_code || 0;
-          const desc = wCode === 0 ? 'Clear' : wCode <= 3 ? 'Partly Cloudy' : wCode <= 48 ? 'Foggy' : wCode <= 67 ? 'Rainy' : wCode <= 77 ? 'Snowy' : wCode <= 82 ? 'Showers' : 'Stormy';
+          const desc = wCode === 0 ? 'Clear' : wCode <= 3 ? 'Partly Cloudy' :
+                        wCode <= 48 ? 'Foggy' : wCode <= 67 ? 'Rainy' :
+                        wCode <= 77 ? 'Snowy' : wCode <= 82 ? 'Showers' : 'Stormy';
           state.weather = {
             temp: Math.round(cur.temperature_2m) + '°C',
             humidity: Math.round(cur.relative_humidity_2m) + '%',
@@ -1166,39 +1174,21 @@
             desc: desc,
             date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
           };
+          // Update any visible weather fields in templates
           updateWeatherInBadge();
-        };
-
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => doFetch(pos.coords.latitude.toFixed(4), pos.coords.longitude.toFixed(4)),
-            async () => {
-              // Fallback to IP geolocation if GPS denied/fails
-              try {
-                const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
-                const ipData = await ipRes.json();
-                if(ipData.latitude && ipData.longitude) doFetch(ipData.latitude, ipData.longitude);
-              } catch(e) {}
-            },
-            { enableHighAccuracy: false, maximumAge: 300000, timeout: 5000 }
-          );
-        }
+          console.log('[Weather]', state.weather);
+        }, () => {}, { enableHighAccuracy: false, maximumAge: 300000 });
       } catch(e) { console.log('Weather fetch failed:', e); }
     }
 
     function updateWeatherInBadge() {
-      if (!state.weather || state.weather.desc === '--') return;
+      if (!state.weather) return;
       const w = state.weather;
-      
-      // Keep workout date synced
-      if (state.workouts[0]) state.workouts[0].date = w.date;
-      if (state.activeStudioWorkout) state.activeStudioWorkout.date = w.date;
-
+      // Update live contenteditable spans if they are on screen
       const elWeather = document.querySelector('[data-weather="desc"]');
       const elHumidity = document.querySelector('[data-weather="humidity"]');
       const elWind = document.querySelector('[data-weather="wind"]');
       const elDate = document.querySelector('[data-weather="date"]');
-      
       if (elWeather) elWeather.innerText = w.desc + ' ' + w.temp;
       if (elHumidity) elHumidity.innerText = w.humidity;
       if (elWind) elWind.innerText = w.wind;
@@ -2109,25 +2099,27 @@
     function handleImageUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-      
-      const imageUrl = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.getElementById('studio-canvas');
-        if (canvas) {
-          const ratio = img.naturalWidth / img.naturalHeight;
-          const clamped = Math.max(9/16, Math.min(1/1, ratio));
-          canvas.style.aspectRatio = clamped.toFixed(4) + ' / 1';
-        }
-        setStudioBg('image', imageUrl);
-        setTimeout(() => {
-          badgePctLeft = 50; badgePctTop = 50; currentScale = 1.0;
-          if (typeof applyBadgePosition === 'function') applyBadgePosition();
-        }, 80);
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const dataUrl = evt.target.result;
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.getElementById('studio-canvas');
+          if (canvas) {
+            const ratio = img.naturalWidth / img.naturalHeight;
+            const clamped = Math.max(9/16, Math.min(1/1, ratio)); // portrait up to square
+            canvas.style.aspectRatio = clamped.toFixed(4) + ' / 1';
+          }
+          setStudioBg('image', dataUrl);
+          // Centre badge after canvas resizes
+          setTimeout(() => {
+            badgePctLeft = 50; badgePctTop = 50; currentScale = 1.0;
+            applyBadgePosition();
+          }, 80);
+        };
+        img.src = dataUrl;
       };
-      img.src = imageUrl;
-      // Allow uploading the same file again
-      e.target.value = '';
+      reader.readAsDataURL(file);
     }
 
     // 10 Templates (Template 3 removed, specific texts editable via contenteditable="true")
@@ -2304,7 +2296,7 @@
               <div class="flex justify-between items-center text-[7px] leading-tight">
                 <div class="border border-white/30 rounded px-1.5 py-0.5 flex flex-col">
                   <span class="text-zinc-400 font-bold">Weather</span>
-                  <span data-weather="desc" contenteditable="true" class="font-extrabold text-white focus:outline-none focus:ring-1 focus:ring-white/20 rounded px-0.5">${state.weather && state.weather.desc !== '--' ? state.weather.desc + ' ' + state.weather.temp : 'Sunny 28°C'}</span>
+                  <span contenteditable="true" class="font-extrabold text-white focus:outline-none focus:ring-1 focus:ring-white/20 rounded px-0.5">Sunny — 28°C</span>
                 </div>
                 <div class="flex flex-col gap-0.5 text-right text-zinc-300">
                   <div>Humidity: <span data-weather="humidity" contenteditable="true" class="font-bold text-white focus:outline-none">${state.weather ? state.weather.humidity : '67%'}</span></div>
@@ -2540,19 +2532,10 @@
     function renderBadge() {
       const workout = state.activeStudioWorkout || state.workouts[0] || null;
       if (!workout) return;
-      
-      // Ensure workout date stays synced with weather date (which is the real current date)
-      if (state.weather && state.weather.date && state.weather.date !== '--') {
-         workout.date = state.weather.date;
-      }
-      
       const template = studioTemplates[state.selectedTemplate];
       const badge = document.getElementById('drag-badge');
       badge.innerHTML = template.html(workout);
       if (typeof applyBadgePosition === 'function') applyBadgePosition();
-      
-      // Also apply weather if it just loaded
-      updateWeatherInBadge();
     }
 
     // --- BADGE DRAG & PINCH ENGINE (background is always locked) ---
