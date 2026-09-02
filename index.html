@@ -1950,7 +1950,22 @@
       if (state.workoutMode !== 'cycling') {
         workout.steps += Math.floor(2.2 + Math.random() * 0.8);
       }
-      workout.calories = Math.floor(workout.elapsedTime * (state.workoutMode === 'running' ? 0.16 : 0.08));
+      
+      let weight = 70;
+      let calDist = 0, calSteps = 0;
+      const dist = parseFloat(workout.distance) || 0;
+      const steps = parseInt(workout.steps) || 0;
+      if (state.workoutMode === 'cycling') {
+          calDist = weight * dist * 0.4;
+      } else if (state.workoutMode === 'walking' || state.workoutMode === 'hiking') {
+          calDist = weight * dist * 0.75;
+          calSteps = steps * 0.04 * (weight / 70);
+      } else {
+          calDist = weight * dist * 1.03;
+          calSteps = steps * 0.06 * (weight / 70);
+      }
+      workout.calories = Math.floor(Math.max(calDist, calSteps, workout.elapsedTime * (state.workoutMode === 'running' ? 0.16 : 0.08)));
+
       
       document.getElementById('hud-steps').innerText = workout.steps.toLocaleString();
       document.getElementById('hud-calories').innerText = workout.calories;
