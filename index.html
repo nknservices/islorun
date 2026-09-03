@@ -1417,6 +1417,16 @@
                          merged.push(cw);
                      }
                  });
+                 // Push offline workouts up to cloud
+                 merged.forEach(mw => {
+                     if (!cloudWorkouts.find(cw => cw.id === mw.id)) {
+                         const uid = state.userSession.uid;
+                         db.collection('users').doc(uid).collection('workouts').doc(mw.id.toString()).set(mw, {merge: true});
+                         const globalData = { ...mw, uid, userName: state.userSession.name || 'Runner', userAvatar: localStorage.getItem('islorun_user_edits') ? JSON.parse(localStorage.getItem('islorun_user_edits')).img : './default-avatar.png' };
+                         db.collection('global_workouts').doc(mw.id.toString()).set(globalData, {merge: true});
+                     }
+                 });
+                 
                  // Sort newest first
                  merged.sort((a, b) => b.id - a.id);
                  state.workouts = merged;
@@ -1968,14 +1978,73 @@
     }
 
     
+    function _startActualTracking(w) {
+      w.timerId = setInterval(() => {
+        w.elapsedTime = Math.floor((Date.now() - w.startTime) / 1000);
+        document.getElementById('hud-time').innerText = new Date(w.elapsedTime * 1000).toISOString().substr(11, 8);
+        
+        const profileStr = localStorage.getItem('islorun_profile');
+        let weight = 70;
+        if(profileStr) {
+            const p = JSON.parse(profileStr);
+            if(p.weight) weight = parseFloat(p.weight);
+        }
+        let met = 9.8;
+        if(state.workoutMode === 'cycling') met = 7.5;
+        if(state.workoutMode === 'walking') met = 3.8;
+        w.calories = Math.floor(met * weight * (w.elapsedTime / 3600));
+        document.getElementById('hud-calories').innerText = w.calories;
+        
+        if (state.activeTab === 'leaderboard') renderLeaderboards();
+      }, 1000);
+
+      if (state.isGPSSimulation) {
+        w.simId = setInterval(updateSimulationTick, 1000);
+      } else {
+        if (navigator.geolocation) {
+          w.watchId = navigator.geolocation.watchPosition((pos) => {
+             if (pos.coords.accuracy > 20) return;
+             const latitude = pos.coords.latitude;
+             const longitude = pos.coords.longitude;
+             w.path.push({lat: latitude, lng: longitude});
+             
+             if(w.path.length > 1) {
+                 const prev = w.path[w.path.length - 2];
+                 w.distance += getDistanceFromLatLonInKm(prev.lat, prev.lng, latitude, longitude);
+                 document.getElementById('hud-distance').innerText = w.distance.toFixed(2);
+                 
+                 if(w.distance > 0) {
+                     const paceMins = (w.elapsedTime / 60) / w.distance;
+                     const pM = Math.floor(paceMins);
+                     const pS = Math.floor((paceMins - pM) * 60);
+                     w.pace = pM + "'" + pS.toString().padStart(2, '0') + '"';
+                     document.getElementById('hud-pace').innerText = w.pace;
+                 }
+             }
+             drawTrackCanvas();
+          }, (err) => {
+              console.log(err);
+          }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+        }
+        if(window.DeviceMotionEvent) window.addEventListener('devicemotion', handleMotion);
+      }
+    }
+
+    function _stopActualTracking(w) {
+      if (w.timerId) { clearInterval(w.timerId); w.timerId = null; }
+      if (w.simId) { clearInterval(w.simId); w.simId = null; }
+      if (w.watchId && navigator.geolocation) { navigator.geolocation.clearWatch(w.watchId); w.watchId = null; }
+      window.removeEventListener('devicemotion', handleMotion);
+    }
+
     function toggleTracking() {
       const w = state.currentWorkout;
       if (!w.isActive) {
-        // Start
         w.isActive = true;
-        requestSensorPermissions();
+        if (!state.isGPSSimulation) requestSensorPermissions();
         w.isPaused = false;
         w.startTime = Date.now() - (w.elapsedTime * 1000);
+        if (state.isGPSSimulation) mockRouteIndex = 0;
         
         document.getElementById('workout-picker-screen').classList.add('hidden');
         document.getElementById('active-workout-screen').classList.remove('hidden');
@@ -1985,82 +2054,16 @@
         document.getElementById('btn-start-icon').setAttribute('data-lucide', 'pause');
         lucide.createIcons();
         
-        // Start Timer
-        w.timerId = setInterval(() => {
-          w.elapsedTime = Math.floor((Date.now() - w.startTime) / 1000);
-          document.getElementById('hud-time').innerText = new Date(w.elapsedTime * 1000).toISOString().substr(11, 8);
-          
-          // Calculate Calories based on profile
-          const profileStr = localStorage.getItem('islorun_profile');
-          let weight = 70;
-          if(profileStr) {
-              const p = JSON.parse(profileStr);
-              if(p.weight) weight = parseFloat(p.weight);
-          }
-          // Standard MET: Running 9.8, Cycling 7.5, Walking 3.8
-          let met = 9.8;
-          if(state.workoutMode === 'cycling') met = 7.5;
-          if(state.workoutMode === 'walking') met = 3.8;
-          
-          w.calories = Math.floor(met * weight * (w.elapsedTime / 3600));
-          document.getElementById('hud-calories').innerText = w.calories;
-          
-          // Actively update leaderboard if open
-          if (state.activeTab === 'leaderboard') {
-              renderLeaderboards();
-          }
-        }, 1000);
-        
-        // Start GPS
-        if (navigator.geolocation) {
-          w.watchId = navigator.geolocation.watchPosition((pos) => {
-             if (pos.coords.accuracy > 20) return; // drop noisy fixes
-             const latitude = pos.coords.latitude;
-             const longitude = pos.coords.longitude;
-             w.path.push({lat: latitude, lng: longitude});
-             
-             // distance calc
-             if(w.path.length > 1) {
-                 const prev = w.path[w.path.length - 2];
-                 w.distance += getDistanceFromLatLonInKm(prev.lat, prev.lng, latitude, longitude);
-                 document.getElementById('hud-distance').innerText = w.distance.toFixed(2);
-                 
-                 // pace calc
-                 if(w.distance > 0) {
-                     const paceMins = (w.elapsedTime / 60) / w.distance;
-                     const pM = Math.floor(paceMins);
-                     const pS = Math.floor((paceMins - pM) * 60);
-                     w.pace = pM + "'" + pS.toString().padStart(2, '0') + '"';
-                     document.getElementById('hud-pace').innerText = w.pace;
-                 }
-             }
-             drawTrackCanvas(); // Updates Leaflet
-          }, (err) => {
-              console.log(err);
-              if(err.code === 1) {
-                  alert("GPS Permission Denied. If you are on an iPhone and using the installed app, Apple restricts GPS access for privacy. Please go to your iPhone Settings > Privacy & Security > Location Services, and ensure Safari/Websites have location access enabled.");
-              } else {
-                  alert("GPS Error: " + err.message);
-              }
-          }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
-        }
-        
-        // Start step counter using DeviceMotion
-        if(window.DeviceMotionEvent) {
-            window.addEventListener('devicemotion', handleMotion);
-        }
+        _startActualTracking(w);
       } else {
-        // Pause
         if (!w.isPaused) {
           w.isPaused = true;
-          clearInterval(w.timerId);
-          if(w.watchId) navigator.geolocation.clearWatch(w.watchId);
-          window.removeEventListener('devicemotion', handleMotion);
+          _stopActualTracking(w);
           document.getElementById('btn-start-icon').setAttribute('data-lucide', 'play');
         } else {
           w.isPaused = false;
           w.startTime = Date.now() - (w.elapsedTime * 1000);
-          w.timerId = setInterval(() => { /* dummy */ }, 1000);
+          _startActualTracking(w);
           document.getElementById('btn-start-icon').setAttribute('data-lucide', 'pause');
         }
         lucide.createIcons();
@@ -2218,7 +2221,7 @@
       if (!workout.isActive) return;
 
       if (confirm("End and save workout?")) {
-        clearInterval(workout.timerId);
+        _stopActualTracking(workout);
         releaseWakeLock();
         if(navigator.vibrate) navigator.vibrate([50]);
 
