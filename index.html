@@ -1248,6 +1248,8 @@
             localStorage.setItem('islorun_user', JSON.stringify(session));
             state.userSession = session;
             
+            loadWorkouts();
+            
             // Listen to PRO status from DB in real-time
             db.collection('users').doc(user.uid).onSnapshot(doc => {
                if (doc.exists) {
@@ -1400,6 +1402,30 @@
     function loadWorkouts() {
       const data = localStorage.getItem('islorun_workouts');
       if (data) state.workouts = JSON.parse(data);
+      
+      // Auto-pull from cloud if logged in
+      if (typeof db !== 'undefined' && state.userSession && state.userSession.uid) {
+         db.collection('users').doc(state.userSession.uid).collection('workouts').get().then(snap => {
+             if (!snap.empty) {
+                 let cloudWorkouts = [];
+                 snap.forEach(doc => cloudWorkouts.push(doc.data()));
+                 
+                 // Merge local and cloud based on ID
+                 const merged = [...state.workouts];
+                 cloudWorkouts.forEach(cw => {
+                     if (!merged.find(mw => mw.id === cw.id)) {
+                         merged.push(cw);
+                     }
+                 });
+                 // Sort newest first
+                 merged.sort((a, b) => b.id - a.id);
+                 state.workouts = merged;
+                 localStorage.setItem('islorun_workouts', JSON.stringify(state.workouts));
+                 if(typeof renderPickerHistory !== 'undefined') renderPickerHistory();
+                 renderLeaderboards();
+             }
+         }).catch(e => console.log('Silent cloud pull fail:', e));
+      }
     }
 
     // Save History
@@ -1407,6 +1433,14 @@
       localStorage.setItem('islorun_workouts', JSON.stringify(state.workouts));
       if(typeof renderPickerHistory !== 'undefined') renderPickerHistory();
       
+      // Auto-push to cloud if logged in
+      if (typeof db !== 'undefined' && state.userSession && state.userSession.uid) {
+         const uid = state.userSession.uid;
+         state.workouts.forEach(w => {
+             db.collection('users').doc(uid).collection('workouts').doc(w.id.toString()).set(w, {merge: true})
+               .catch(e => console.log('Silent cloud push fail:', e));
+         });
+      }
     }
 
     function switchTab(tabId) {
