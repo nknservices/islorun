@@ -1248,16 +1248,44 @@
             localStorage.setItem('islorun_user', JSON.stringify(session));
             state.userSession = session;
             
-            // Fetch PRO status from DB
-            db.collection('users').doc(user.uid).get().then(doc => {
-               if (doc.exists && doc.data().isPro === true) {
-                   localStorage.setItem('islorun_pro', 'true');
+            // Listen to PRO status from DB in real-time
+            db.collection('users').doc(user.uid).onSnapshot(doc => {
+               if (doc.exists) {
+                   const data = doc.data();
+                   if (data.isPro === true) {
+                       // Check 30-day expiration
+                       let grantedMs = Date.now();
+                       if (data.proGrantedDate) {
+                           grantedMs = data.proGrantedDate.toMillis ? data.proGrantedDate.toMillis() : Date.now();
+                       } else {
+                           // First time seeing true, set the timestamp
+                           db.collection('users').doc(user.uid).update({
+                               proGrantedDate: firebase.firestore.FieldValue.serverTimestamp(),
+                               status: 'approved'
+                           });
+                       }
+                       
+                       const oneMonthMs = 30 * 24 * 60 * 60 * 1000;
+                       if (Date.now() - grantedMs > oneMonthMs && data.proGrantedDate) {
+                           // Expired
+                           db.collection('users').doc(user.uid).update({
+                               isPro: false,
+                               status: 'expired'
+                           });
+                           localStorage.removeItem('islorun_pro');
+                       } else {
+                           // Valid Pro
+                           localStorage.setItem('islorun_pro', 'true');
+                       }
+                   } else {
+                       localStorage.removeItem('islorun_pro');
+                   }
                } else {
                    localStorage.removeItem('islorun_pro');
                }
                loadProStatus();
             });
-
+  
           } else {
             localStorage.removeItem('islorun_user');
             localStorage.removeItem('islorun_pro');
