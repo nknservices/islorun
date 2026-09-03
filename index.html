@@ -1436,9 +1436,24 @@
       // Auto-push to cloud if logged in
       if (typeof db !== 'undefined' && state.userSession && state.userSession.uid) {
          const uid = state.userSession.uid;
+         const profileStr = localStorage.getItem('islorun_user_edits');
+         let name = state.userSession.name || 'Runner';
+         let avatar = './default-avatar.png';
+         if (profileStr) {
+             const p = JSON.parse(profileStr);
+             if (p.name) name = p.name;
+             if (p.img) avatar = p.img;
+         }
+         
          state.workouts.forEach(w => {
+             // Backup privately
              db.collection('users').doc(uid).collection('workouts').doc(w.id.toString()).set(w, {merge: true})
                .catch(e => console.log('Silent cloud push fail:', e));
+               
+             // Push to global leaderboard collection
+             const globalData = { ...w, uid, userName: name, userAvatar: avatar };
+             db.collection('global_workouts').doc(w.id.toString()).set(globalData, {merge: true})
+               .catch(e => console.log('Global push fail:', e));
          });
       }
     }
@@ -1475,6 +1490,27 @@
       if (activeTab) {
         activeTab.classList.add('active');
         activeTab.classList.remove('hidden');
+      }
+      
+      state.activeTab = tabId;
+
+      // Post-switch actions
+      if(tabId === 'radar' && typeof snapMap !== 'undefined') {
+        setTimeout(() => { snapMap.invalidateSize(); }, 100);
+      }
+      if(tabId === 'leaderboard') {
+        // Fetch active real global workouts if connected
+        if (typeof db !== 'undefined') {
+            db.collection('global_workouts').get().then(snap => {
+                if (!snap.empty) {
+                    let gw = [];
+                    snap.forEach(doc => gw.push(doc.data()));
+                    state.globalWorkouts = gw;
+                    renderLeaderboards();
+                }
+            }).catch(e => console.log('Silently failed to load global ranks', e));
+        }
+        renderLeaderboards();
       }
       
       if (tabId === 'studio' && typeof state.selectedTemplate === 'undefined') {
@@ -1768,6 +1804,47 @@
       
       let records = [...(mockLeaderboards[filter.mode]?.[filter.timeframe] || [])];
       
+      // Inject Real Global Users
+      if (state.globalWorkouts && state.globalWorkouts.length > 0) {
+          const now = Date.now();
+          const userAggregates = {};
+          
+          state.globalWorkouts.forEach(w => {
+              if (w.mode === filter.mode) {
+                  const t = w.timestamp || new Date(w.date).getTime();
+                  let include = false;
+                  if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
+                  if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
+                  if (filter.timeframe === 'monthly' && now - t < 30 * 86400000) include = true;
+                  
+                  if (include) {
+                      if (!userAggregates[w.uid]) {
+                          userAggregates[w.uid] = { dist: 0, time: 0, name: w.userName || 'Runner', avatar: w.userAvatar || './default-avatar.png' };
+                      }
+                      userAggregates[w.uid].dist += parseFloat(w.distance || 0);
+                      userAggregates[w.uid].time += (w.elapsedSeconds || 0) / 3600;
+                  }
+              }
+          });
+          
+          Object.keys(userAggregates).forEach(uid => {
+              // We'll let the user's local calculation override their own global row if they are logged in, 
+              // because local is more real-time. So skip the logged-in user here.
+              if (state.userSession && uid === state.userSession.uid) return;
+              
+              const agg = userAggregates[uid];
+              let userSpeed = agg.time > 0 ? (agg.dist / agg.time).toFixed(1) : 0;
+              
+              records.push({
+                  name: agg.name,
+                  distance: parseFloat(agg.dist.toFixed(1)),
+                  speed: parseFloat(userSpeed),
+                  avatar: agg.avatar,
+                  isUser: false
+              });
+          });
+      }
+      
       // Calculate and inject current user's stats
       if (state.userSession && state.workouts) {
          let userDist = 0;
@@ -1787,6 +1864,12 @@
                  }
              }
          });
+         
+         // Actively include ongoing workout!
+         if (state.currentWorkout && state.currentWorkout.isActive && state.workoutMode === filter.mode) {
+             userDist += parseFloat(state.currentWorkout.distance || 0);
+             userTime += (state.currentWorkout.elapsedTime || 0) / 3600;
+         }
          
          // Always show them in the ranks if registered, even if 0 distance, so they see their profile
          let userSpeed = userTime > 0 ? (userDist / userTime).toFixed(1) : 0;
@@ -1921,6 +2004,11 @@
           
           w.calories = Math.floor(met * weight * (w.elapsedTime / 3600));
           document.getElementById('hud-calories').innerText = w.calories;
+          
+          // Actively update leaderboard if open
+          if (state.activeTab === 'leaderboard') {
+              renderLeaderboards();
+          }
         }, 1000);
         
         // Start GPS
