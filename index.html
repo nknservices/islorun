@@ -294,10 +294,10 @@
 
             <button onclick="setWorkoutMode('walking')" id="picker-walking" class="picker-mode-card border-2 border-zinc-900 bg-brandCard rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-98 select-none">
               <div class="p-2.5 rounded-full bg-zinc-900 text-zinc-400 mb-2" id="picker-icon-walking">
-                <i data-lucide="accessibility" class="w-5.5 h-5.5"></i>
+                <i data-lucide="person-standing" class="w-5.5 h-5.5"></i>
               </div>
               <span class="text-xs font-black text-zinc-400" id="picker-text-walking">Walking</span>
-              <span class="text-[9px] text-zinc-555 mt-0.5">MET 3.5 • Steps</span>
+              <span class="text-[9px] text-zinc-555 mt-0.5">MET 3.8 • Steps</span>
             </button>
 
             <button onclick="setWorkoutMode('hiking')" id="picker-hiking" class="picker-mode-card border-2 border-zinc-900 bg-brandCard rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-98 select-none">
@@ -3177,7 +3177,7 @@ function setProStatus(isPro, days) {
         <div class="bg-brandCard border border-zinc-800 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:border-brandAccent transition-colors" onclick="loadMapFromHistory(${w.id})">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
-              <i data-lucide="${w.mode === 'cycling' ? 'bike' : w.mode === 'walking' ? 'accessibility' : w.mode === 'hiking' ? 'mountain' : 'footprints'}" class="w-4 h-4"></i>
+              <i data-lucide="${w.mode === 'cycling' ? 'bike' : w.mode === 'walking' ? 'person-standing' : w.mode === 'hiking' ? 'mountain' : 'footprints'}" class="w-4 h-4"></i>
             </div>
             <div class="flex flex-col">
               <span class="text-xs font-bold capitalize">${w.mode} • ${w.date}</span>
