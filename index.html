@@ -2848,30 +2848,41 @@ function setProStatus(isPro, days) {
       }, 5000);
 
       if (db && state.userSession) {
-         db.collection('payments').add({
-             uid: state.userSession.uid,
-             email: state.userSession.email,
-             trxId: trx,
-             status: 'pending',
-             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-         }).then(() => {
-             isDone = true;
-             clearTimeout(fbTimeout);
-             el.innerText = "Payment Received! Please allow 1-12 hours for manual verification.";
-             setTimeout(() => { closeUpgradeModal(); }, 4000);
+         const uid = state.userSession.uid;
+         const docRef = db.collection('users').doc(uid);
          
+         docRef.get().then(doc => {
+             if (doc.exists && doc.data().status === 'pending') {
+                 isDone = true;
+                 clearTimeout(fbTimeout);
+                 alert("TRX ID already in pending. Please wait for confirmation.");
+                 closeUpgradeModal();
+             } else {
+                 docRef.set({
+                     uid: uid,
+                     email: state.userSession.email,
+                     trxId: trx,
+                     status: 'pending',
+                     isPro: false,
+                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                 }, { merge: true }).then(() => {
+                     isDone = true;
+                     clearTimeout(fbTimeout);
+                     el.innerText = "Payment Received! Please allow 1-12 hours for manual verification.";
+                     setTimeout(() => { closeUpgradeModal(); }, 4000);
+                 }).catch(err => {
+                     isDone = true;
+                     clearTimeout(fbTimeout);
+                     alert("Error saving transaction: " + err.message);
+                     closeUpgradeModal();
+                 });
+             }
          }).catch(err => {
              isDone = true;
              clearTimeout(fbTimeout);
-             if (err.message.includes('Missing or insufficient permissions')) {
-                 el.innerText = "Payment Queued! Awaiting manual verification.";
-                 setTimeout(() => { closeUpgradeModal(); }, 4000);
-             } else {
-                 alert("Error saving transaction: " + err.message);
-                 closeUpgradeModal();
-             }
+             alert("Error checking TRX status: " + err.message);
+             closeUpgradeModal();
          });
-
       } else {
 
          el.innerText = "You must be logged in to upgrade!";
