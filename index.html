@@ -831,7 +831,7 @@
           </div>
           
           <div class="bg-[#1da846]/10 border border-[#1da846]/30 p-4 rounded-xl text-center flex flex-col gap-2">
-             <span class="text-[10px] font-bold text-zinc-400 uppercase">Send Rs. 500 to:</span>
+             <span class="text-[10px] font-bold text-zinc-400 uppercase">Send Rs. 299 for one month to:</span>
              <span class="text-xl font-black text-[#1da846]">03365005815</span>
              <span class="text-sm font-bold text-zinc-200">Naseem khan</span>
           </div>
@@ -892,7 +892,7 @@
       selectedTier: 'monthly',
       
       // Social & Radar
-      ghostMode: true,
+      ghostMode: false,
       userSession: null, // Simulated or Firebase user profile
       followedRunners: [2], // Ayesha followed initially
       chattingRunner: null,
@@ -1604,11 +1604,14 @@
           iconAnchor: [24, 24]
         });
         snapMarkers.push(L.marker(center, {icon: userIcon, zIndexOffset: 1000}).addTo(snapMap));
+        
+        // Add 5km radar visual radius
+        L.circle(center, {radius: 5000, color: '#ec4899', fillOpacity: 0.05, weight: 1}).addTo(snapMap);
 
-        // Add dummy runners around the center
+        // Add dummy runners around the center (5km radius approx)
         mockRunners.forEach(r => {
-           const latOffset = (Math.random() - 0.5) * 0.015;
-           const lngOffset = (Math.random() - 0.5) * 0.015;
+           const latOffset = (Math.random() - 0.5) * 0.09;
+           const lngOffset = (Math.random() - 0.5) * 0.09;
            
            const icon = L.divIcon({
               className: 'snap-marker-bot',
@@ -1725,33 +1728,88 @@
       renderLeaderboards();
     }
 
-    function renderLeaderboards() {
+         function renderLeaderboards() {
       const container = document.getElementById('leaderboard-container');
       const filter = state.leaderboardFilters;
       
-      const records = mockLeaderboards[filter.mode]?.[filter.timeframe] || [];
+      let records = [...(mockLeaderboards[filter.mode]?.[filter.timeframe] || [])];
+      
+      // Calculate and inject current user's stats
+      if (state.userSession && state.workouts) {
+         let userDist = 0;
+         let userTime = 0;
+         const now = Date.now();
+         
+         state.workouts.forEach(w => {
+             if (w.mode === filter.mode) {
+                 const t = new Date(w.date).getTime();
+                 let include = false;
+                 if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
+                 if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
+                 if (filter.timeframe === 'monthly' && now - t < 30 * 86400000) include = true;
+                 if (include) {
+                     userDist += parseFloat(w.distance || 0);
+                     userTime += (w.elapsedSeconds || 0) / 3600;
+                 }
+             }
+         });
+         
+         // Always show them in the ranks if registered, even if 0 distance, so they see their profile
+         let userSpeed = userTime > 0 ? (userDist / userTime).toFixed(1) : 0;
+         
+         // Fetch uploaded avatar and name
+         let avatar = './default-avatar.png';
+         let name = state.userSession.name || 'You';
+         const profStr = localStorage.getItem('islorun_user_edits');
+         if (profStr) {
+             const prof = JSON.parse(profStr);
+             if (prof.img) avatar = prof.img;
+             if (prof.name) name = prof.name;
+         } else {
+             const baseProf = localStorage.getItem('islorun_profile');
+             if (baseProf) {
+                 const p = JSON.parse(baseProf);
+                 if (p.name) name = p.name;
+                 if (p.img) avatar = p.img;
+             }
+         }
+         
+         // Remove if randomly matching a dummy name
+         records = records.filter(r => r.name !== name);
+         
+         records.push({
+             name: name + " (You)",
+             distance: parseFloat(userDist.toFixed(1)),
+             speed: parseFloat(userSpeed),
+             avatar: avatar,
+             isUser: true
+         });
+      }
+      
       if (records.length === 0) {
         container.innerHTML = `<div class="text-center py-4 text-xs text-zinc-555">No leaderboard entries found for filter.</div>`;
         return;
       }
       
-      const sorted = [...records].sort((a, b) => b[filter.metric] - a[filter.metric]);
+      const sorted = records.sort((a, b) => b[filter.metric] - a[filter.metric]);
       
       container.innerHTML = '';
       sorted.forEach((r, idx) => {
         const valueSuffix = filter.metric === 'distance' ? `${r.distance} km` : `${r.speed} km/h`;
+        const highlightClass = r.isUser ? 'border-brandAccent bg-brandAccent/10' : 'border-zinc-955 bg-zinc-900/60';
+        const nameColor = r.isUser ? 'text-brandAccent' : 'text-white';
         
         const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-2 rounded-xl bg-zinc-900/60 border border-zinc-955";
+        row.className = `flex items-center justify-between p-2 rounded-xl border ${highlightClass}`;
         row.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-xs font-mono font-bold text-zinc-555 w-4">${idx + 1}</span>
             <div class="w-7 h-7 rounded-full overflow-hidden border border-zinc-800 shrink-0">
               <img src="${r.avatar}" class="w-full h-full object-cover" alt="avatar">
             </div>
-            <span class="text-xs font-extrabold text-white">${r.name}</span>
+            <span class="text-xs font-extrabold ${nameColor}">${r.name}</span>
           </div>
-          <span class="text-xs font-black font-mono text-brandAccent">${valueSuffix}</span>
+          <span class="text-[10px] font-black tracking-widest text-zinc-400 uppercase">${valueSuffix}</span>
         `;
         container.appendChild(row);
       });
