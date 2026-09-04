@@ -1206,14 +1206,12 @@
       resetStudioWorkoutToDefault();
       buildTemplatesSelectorUI();
       initDragBadgeControls();
-      window.onload = () => {
-        
-        setupDialogFallback();
-        setWorkoutMode('running');
-        loadProfileEdits();
-        setStudioBg('image', 'https://upload.wikimedia.org/wikipedia/commons/e/e5/The_Margalla_Hills%2C_Islamabad%2C_Pakistan_from_Daman-e-Koh_park.jpg');
-  
-        // Setup initial canvas draw loop
+      setupDialogFallback();
+      setWorkoutMode('running');
+      loadProfileEdits();
+      setStudioBg('image', 'https://upload.wikimedia.org/wikipedia/commons/e/e5/The_Margalla_Hills%2C_Islamabad%2C_Pakistan_from_Daman-e-Koh_park.jpg');
+
+      // Setup initial canvas draw loop
       drawTrackCanvas();
     };
 
