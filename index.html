@@ -813,11 +813,41 @@
           <img id="upm-avatar" src="" class="w-full h-full object-cover">
         </div>
         <h2 id="upm-name" class="text-xl font-black text-white uppercase tracking-wider">Name</h2>
-        <p id="upm-distance" class="text-xs text-brandAccent font-bold mb-6">0 km</p>
+        <p id="upm-distance" class="text-xs text-brandAccent font-bold mb-4">0 km</p>
         
-        <button onclick="handleMessageUser()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brandAccent to-brandActive text-black font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(236,72,153,0.25)] transition-all active:scale-98 flex items-center justify-center gap-2">
-          <i data-lucide="message-circle" class="w-4.5 h-4.5"></i> Message (Pro)
-        </button>
+        <div class="flex w-full gap-2 mt-2">
+           <button id="upm-follow-btn" onclick="toggleFollowRunner()" class="flex-1 py-3 rounded-xl bg-brandAccent text-white font-black text-xs uppercase tracking-wider transition-all">Follow</button>
+           <button id="upm-msg-btn" onclick="openChat()" class="hidden flex-1 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Message</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="chat-modal" class="modal bg-transparent p-0 w-full max-w-md h-[80vh] max-h-[800px] rounded-[24px] overflow-hidden outline-none border-none z-[1200] self-end mb-4">
+      <div class="bg-brandCard border border-zinc-800 rounded-[24px] shadow-2xl flex flex-col w-full h-full text-white">
+        <!-- Chat Header -->
+        <div class="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900/50">
+           <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden shrink-0 border border-brandAccent">
+                 <img id="chat-avatar" src="" class="w-full h-full object-cover">
+              </div>
+              <div class="flex flex-col">
+                 <span id="chat-name" class="text-sm font-black uppercase tracking-wider">Name</span>
+                 <span class="text-[9px] text-brandAccent font-bold uppercase tracking-widest">Active</span>
+              </div>
+           </div>
+           <button onclick="document.getElementById('chat-modal').close()" class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all shrink-0">
+             <i data-lucide="x" class="w-4 h-4"></i>
+           </button>
+        </div>
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+           <!-- Messages injected here -->
+        </div>
+        <!-- Chat Input -->
+        <div class="p-3 border-t border-zinc-800 bg-zinc-900/80 flex gap-2">
+           <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-brandAccent" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+           <button onclick="sendChatMessage()" class="w-12 h-12 rounded-xl bg-brandAccent text-white flex items-center justify-center shrink-0 active:scale-95 transition-transform"><i data-lucide="send" class="w-4 h-4"></i></button>
+        </div>
       </div>
     </dialog>
 
@@ -1264,6 +1294,21 @@
             localStorage.setItem('islorun_user', JSON.stringify(session));
             state.userSession = session;
             
+            // Restore profile data from Firestore
+            db.collection('users').doc(user.uid).get().then(doc => {
+               if (doc.exists) {
+                  const data = doc.data();
+                  if (data.displayName || data.photoURL) {
+                     const profileData = { 
+                        name: data.displayName || session.name, 
+                        img: data.photoURL || document.getElementById('profile-user-img').src 
+                     };
+                     localStorage.setItem('islorun_user_edits', JSON.stringify(profileData));
+                     loadProfileEdits();
+                  }
+               }
+            }).catch(e => console.log('Silent profile pull fail:', e));
+
             loadWorkouts();
             
             // Listen to PRO status from DB in real-time
@@ -1328,7 +1373,7 @@
         state.userSession = JSON.parse(savedUser);
         authPanel.classList.add('hidden');
         profileCard.classList.remove('hidden');
-        document.getElementById('profile-user-name').innerText = state.userSession.name || 'Islo Runner';
+        document.getElementById('profile-user-name').value = state.userSession.name || 'Islo Runner';
         document.getElementById('profile-user-email').innerText = state.userSession.email || 'runner@islorun.com';
       } else {
         state.userSession = null;
@@ -1417,7 +1462,10 @@
 
     function loadWorkouts() {
       const data = localStorage.getItem('islorun_workouts');
-      if (data) state.workouts = JSON.parse(data);
+      if (data) {
+        state.workouts = JSON.parse(data);
+        if (typeof renderPickerHistory !== 'undefined') renderPickerHistory();
+      }
       
       // Auto-pull from cloud if logged in
       if (typeof db !== 'undefined' && state.userSession && state.userSession.uid) {
@@ -1967,21 +2015,110 @@
         if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
+      let followingUsers = JSON.parse(localStorage.getItem('islorun_following') || '[]');
+      
       function viewUserProfile(uid, name, avatar, distanceTxt) {
-          state.viewingUser = { uid, name };
+          state.viewingUser = { uid, name, avatar };
           document.getElementById('upm-avatar').src = avatar;
           document.getElementById('upm-name').innerText = name.replace(' (You)', '');
           document.getElementById('upm-distance').innerText = distanceTxt + " in mode";
+          
+          const isFollowing = followingUsers.includes(uid);
+          const followBtn = document.getElementById('upm-follow-btn');
+          const msgBtn = document.getElementById('upm-msg-btn');
+          
+          if (uid === (state.userSession && state.userSession.uid)) {
+             followBtn.style.display = 'none';
+             msgBtn.style.display = 'none';
+          } else {
+             followBtn.style.display = 'block';
+             if (isFollowing) {
+                 followBtn.innerText = 'Unfollow';
+                 followBtn.classList.replace('bg-brandAccent', 'bg-zinc-800');
+                 followBtn.classList.replace('text-white', 'text-zinc-400');
+                 msgBtn.classList.remove('hidden');
+             } else {
+                 followBtn.innerText = 'Follow';
+                 followBtn.classList.replace('bg-zinc-800', 'bg-brandAccent');
+                 followBtn.classList.replace('text-zinc-400', 'text-white');
+                 msgBtn.classList.add('hidden');
+             }
+          }
+          
           document.getElementById('user-profile-modal').showModal();
       }
       
-      function handleMessageUser() {
+      function toggleFollowRunner() {
+          if (!state.userSession) return alert("Please log in to follow runners!");
+          const uid = state.viewingUser.uid;
+          
+          const isFollowing = followingUsers.includes(uid);
+          if (isFollowing) {
+              followingUsers = followingUsers.filter(x => x !== uid);
+          } else {
+              followingUsers.push(uid);
+          }
+          localStorage.setItem('islorun_following', JSON.stringify(followingUsers));
+          
+          // Re-render modal buttons
+          viewUserProfile(uid, state.viewingUser.name, state.viewingUser.avatar, document.getElementById('upm-distance').innerText.replace(' in mode', ''));
+      }
+      
+      let unsubscribeChat = null;
+      function openChat() {
           if (!state.isPro) {
               document.getElementById('user-profile-modal').close();
               openUpgradeModal();
-          } else {
-              alert("Messaging Interface Initializing... (Coming Soon!)");
+              return;
           }
+          document.getElementById('user-profile-modal').close();
+          const target = state.viewingUser;
+          document.getElementById('chat-avatar').src = target.avatar;
+          document.getElementById('chat-name').innerText = target.name;
+          document.getElementById('chat-messages').innerHTML = '';
+          document.getElementById('chat-modal').showModal();
+          
+          if (unsubscribeChat) unsubscribeChat();
+          
+          const chatId = [state.userSession.uid, target.uid].sort().join('_');
+          if(typeof db !== 'undefined') {
+              unsubscribeChat = db.collection('chats').doc(chatId).collection('messages')
+                  .orderBy('timestamp', 'asc').limit(50)
+                  .onSnapshot(snap => {
+                      const box = document.getElementById('chat-messages');
+                      box.innerHTML = '';
+                      snap.forEach(doc => {
+                          const msg = doc.data();
+                          const isMe = msg.senderId === state.userSession.uid;
+                          box.innerHTML += `
+                            <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                               <div class="max-w-[80%] px-4 py-2 rounded-2xl ${isMe ? 'bg-brandAccent text-white rounded-tr-sm' : 'bg-zinc-800 text-zinc-300 rounded-tl-sm'} text-sm">
+                                  ${msg.text}
+                               </div>
+                            </div>
+                          `;
+                      });
+                      box.scrollTop = box.scrollHeight;
+                  });
+          }
+      }
+      
+      function sendChatMessage() {
+          const input = document.getElementById('chat-input');
+          const text = input.value.trim();
+          if (!text) return;
+          
+          const target = state.viewingUser;
+          const chatId = [state.userSession.uid, target.uid].sort().join('_');
+          
+          if(typeof db !== 'undefined') {
+              db.collection('chats').doc(chatId).collection('messages').add({
+                  text,
+                  senderId: state.userSession.uid,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              });
+          }
+          input.value = '';
       }
 
     // --- FITNESS TRACKING ENGINE (Live State Machine) ---
@@ -3232,10 +3369,22 @@ function setProStatus(isPro, days) {
     function renderPickerHistory() {
       const list = document.getElementById('picker-history-list');
       if (!list) return;
+
+      // Update Dashboard Stats
+      const dashDist = document.getElementById('dash-weekly-dist');
+      const dashCount = document.getElementById('dash-weekly-count');
+      if (dashDist && dashCount && state.workouts) {
+        let totalDist = 0;
+        state.workouts.forEach(w => totalDist += parseFloat(w.distance || 0));
+        dashDist.innerHTML = `${totalDist.toFixed(2)} <span class="text-[10px] text-zinc-400">km</span>`;
+        dashCount.innerText = state.workouts.length;
+      }
+
       if (!state.workouts || state.workouts.length === 0) {
         list.innerHTML = '<div class="text-xs text-zinc-500 text-center py-4 bg-zinc-900/50 rounded-xl">No previous records found.</div>';
         return;
       }
+      
       list.innerHTML = state.workouts.map(w => `
         <div class="bg-brandCard border border-zinc-800 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:border-brandAccent transition-colors" onclick="loadMapFromHistory(${w.id})">
           <div class="flex items-center gap-3">
@@ -3243,14 +3392,14 @@ function setProStatus(isPro, days) {
               <i data-lucide="${w.mode === 'cycling' ? 'bike' : w.mode === 'walking' ? 'person-standing' : w.mode === 'hiking' ? 'mountain' : 'footprints'}" class="w-4 h-4"></i>
             </div>
             <div class="flex flex-col">
-              <span class="text-xs font-bold capitalize">${w.mode} • ${w.date}</span>
-              <span class="text-[10px] text-zinc-500">${w.distance} km in ${w.time}</span>
+              <span class="text-xs font-bold capitalize">${w.mode} • ${w.date || 'Recent'}</span>
+              <span class="text-[10px] text-zinc-500">${w.distance} km in ${w.time || '0:00'}</span>
             </div>
           </div>
           <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600"></i>
         </div>
       `).join('');
-      lucide.createIcons();
+      if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     
