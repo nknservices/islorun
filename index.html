@@ -823,40 +823,14 @@
           <img id="upm-avatar" src="" class="w-full h-full object-cover">
         </div>
         <h2 id="upm-name" class="text-xl font-black text-white uppercase tracking-wider">Name</h2>
-        <p id="upm-distance" class="text-xs text-brandAccent font-bold mb-4">0 km</p>
+        <div class="flex flex-col items-center gap-0.5 mb-4">
+            <p id="upm-distance" class="text-xs text-brandAccent font-bold">0 km</p>
+            <p id="upm-followers" class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">0 Followers</p>
+        </div>
         
         <div class="flex w-full gap-2 mt-2">
            <button id="upm-follow-btn" onclick="toggleFollowRunner()" class="flex-1 py-3 rounded-xl bg-brandAccent text-white font-black text-xs uppercase tracking-wider transition-all">Follow</button>
            <button id="upm-msg-btn" onclick="openChat()" class="hidden flex-1 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Message</button>
-        </div>
-      </div>
-    </dialog>
-
-    <dialog id="chat-modal" class="modal bg-transparent p-0 w-full max-w-md h-[80vh] max-h-[800px] rounded-[24px] overflow-hidden outline-none border-none z-[1200] self-end mb-4">
-      <div class="bg-brandCard border border-zinc-800 rounded-[24px] shadow-2xl flex flex-col w-full h-full text-white">
-        <!-- Chat Header -->
-        <div class="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900/50">
-           <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden shrink-0 border border-brandAccent">
-                 <img id="chat-avatar" src="" class="w-full h-full object-cover">
-              </div>
-              <div class="flex flex-col">
-                 <span id="chat-name" class="text-sm font-black uppercase tracking-wider">Name</span>
-                 <span class="text-[9px] text-brandAccent font-bold uppercase tracking-widest">Active</span>
-              </div>
-           </div>
-           <button onclick="document.getElementById('chat-modal').close()" class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all shrink-0">
-             <i data-lucide="x" class="w-4 h-4"></i>
-           </button>
-        </div>
-        <!-- Chat Messages -->
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-           <!-- Messages injected here -->
-        </div>
-        <!-- Chat Input -->
-        <div class="p-3 border-t border-zinc-800 bg-zinc-900/80 flex gap-2">
-           <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-brandAccent" onkeypress="if(event.key === 'Enter') sendChatMessage()">
-           <button onclick="sendChatMessage()" class="w-12 h-12 rounded-xl bg-brandAccent text-white flex items-center justify-center shrink-0 active:scale-95 transition-transform"><i data-lucide="send" class="w-4 h-4"></i></button>
         </div>
       </div>
     </dialog>
@@ -2079,6 +2053,21 @@
           const isFollowing = followingUsers.includes(uid);
           const followBtn = document.getElementById('upm-follow-btn');
           const msgBtn = document.getElementById('upm-msg-btn');
+          const followersEl = document.getElementById('upm-followers');
+          
+          followersEl.innerText = '... Followers';
+          
+          if (typeof db !== 'undefined') {
+              db.collection('users').doc(uid).get().then(doc => {
+                  if (doc.exists) {
+                      const data = doc.data();
+                      const fCount = data.followers ? data.followers.length : 0;
+                      followersEl.innerText = fCount + ' Followers';
+                  } else {
+                      followersEl.innerText = '0 Followers';
+                  }
+              }).catch(() => followersEl.innerText = '0 Followers');
+          }
           
           if (uid === (state.userSession && state.userSession.uid)) {
              followBtn.style.display = 'none';
@@ -2104,6 +2093,7 @@
       function toggleFollowRunner() {
           if (!state.userSession) return alert("Please log in to follow runners!");
           const uid = state.viewingUser.uid;
+          const myUid = state.userSession.uid;
           
           const isFollowing = followingUsers.includes(uid);
           if (isFollowing) {
@@ -2113,65 +2103,31 @@
           }
           localStorage.setItem('islorun_following', JSON.stringify(followingUsers));
           
-          // Re-render modal buttons
+          if (typeof db !== 'undefined') {
+              if (isFollowing) {
+                  db.collection('users').doc(uid).update({
+                      followers: firebase.firestore.FieldValue.arrayRemove(myUid)
+                  }).catch(e => console.log(e));
+              } else {
+                  db.collection('users').doc(uid).update({
+                      followers: firebase.firestore.FieldValue.arrayUnion(myUid)
+                  }).catch(e => {
+                      db.collection('users').doc(uid).set({ followers: [myUid] }, {merge: true});
+                  });
+              }
+          }
+          
+          // Re-render modal buttons & update count optimistically
+          const followersEl = document.getElementById('upm-followers');
+          let currentCount = parseInt(followersEl.innerText) || 0;
+          currentCount = isFollowing ? Math.max(0, currentCount - 1) : currentCount + 1;
+          followersEl.innerText = currentCount + ' Followers';
+          
           viewUserProfile(uid, state.viewingUser.name, state.viewingUser.avatar, document.getElementById('upm-distance').innerText.replace(' in mode', ''));
       }
       
-      let unsubscribeChat = null;
       function openChat() {
-          if (!state.isPro) {
-              document.getElementById('user-profile-modal').close();
-              openUpgradeModal();
-              return;
-          }
-          document.getElementById('user-profile-modal').close();
-          const target = state.viewingUser;
-          document.getElementById('chat-avatar').src = target.avatar;
-          document.getElementById('chat-name').innerText = target.name;
-          document.getElementById('chat-messages').innerHTML = '';
-          document.getElementById('chat-modal').showModal();
-          
-          if (unsubscribeChat) unsubscribeChat();
-          
-          const chatId = [state.userSession.uid, target.uid].sort().join('_');
-          if(typeof db !== 'undefined') {
-              unsubscribeChat = db.collection('chats').doc(chatId).collection('messages')
-                  .orderBy('timestamp', 'asc').limit(50)
-                  .onSnapshot(snap => {
-                      const box = document.getElementById('chat-messages');
-                      box.innerHTML = '';
-                      snap.forEach(doc => {
-                          const msg = doc.data();
-                          const isMe = msg.senderId === state.userSession.uid;
-                          box.innerHTML += `
-                            <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
-                               <div class="max-w-[80%] px-4 py-2 rounded-2xl ${isMe ? 'bg-brandAccent text-white rounded-tr-sm' : 'bg-zinc-800 text-zinc-300 rounded-tl-sm'} text-sm">
-                                  ${msg.text}
-                               </div>
-                            </div>
-                          `;
-                      });
-                      box.scrollTop = box.scrollHeight;
-                  });
-          }
-      }
-      
-      function sendChatMessage() {
-          const input = document.getElementById('chat-input');
-          const text = input.value.trim();
-          if (!text) return;
-          
-          const target = state.viewingUser;
-          const chatId = [state.userSession.uid, target.uid].sort().join('_');
-          
-          if(typeof db !== 'undefined') {
-              db.collection('chats').doc(chatId).collection('messages').add({
-                  text,
-                  senderId: state.userSession.uid,
-                  timestamp: firebase.firestore.FieldValue.serverTimestamp()
-              });
-          }
-          input.value = '';
+          alert("Chat coming soon!");
       }
 
     // --- FITNESS TRACKING ENGINE (Live State Machine) ---
