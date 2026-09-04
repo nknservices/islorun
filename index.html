@@ -1765,8 +1765,9 @@
                 let pLng = center[1] + (Math.random() - 0.5) * 0.09;
                 if (w.path && w.path.length > 0) {
                     const lastP = w.path[w.path.length - 1];
-                    pLat = lastP.lat;
-                    pLng = lastP.lng;
+                    // Micro-jitter so users in the exact same room don't perfectly overlap
+                    pLat = lastP.lat + (Math.random() - 0.5) * 0.0008;
+                    pLng = lastP.lng + (Math.random() - 0.5) * 0.0008;
                 }
                 
                 const icon = L.divIcon({
