@@ -2348,11 +2348,15 @@
       state.studioBg = { type, value };
       const overlay = document.getElementById('studio-bg-overlay');
       const canvas = document.getElementById('studio-canvas');
-      // Background is always fixed — never translates or scales
+      
+      // Background is always fixed
       overlay.style.transform = 'none';
       overlay.style.backgroundImage = 'none';
-      canvas.className = canvas.className.replace(/\bbg-gradient-to-\S+/g, '');
-      canvas.classList.remove('bg-checkerboard');
+      overlay.style.backgroundColor = 'transparent'; // Fix: explicitly clear overlay background
+
+      // Remove all bg- classes from canvas (including bg-[#0a0a0c])
+      canvas.className = canvas.className.replace(/\bbg-[^\s]+/g, '').trim();
+
       if (type === 'gradient') {
         canvas.classList.add(...value.split(' '));
       } else if (type === 'checkerboard') {
@@ -2983,11 +2987,24 @@
     function exportStudioImage() {
       const studioNode = document.getElementById('studio-canvas');
       const isTransparent = state.studioBg && state.studioBg.type === 'checkerboard';
+      
+      const controls = document.getElementById('badge-scale-controls');
+      if (controls) controls.style.display = 'none';
+
+      const origCanvasClass = studioNode.className;
+      if (isTransparent) {
+        studioNode.className = studioNode.className.replace(/\bbg-[^\s]+/g, '').trim();
+      }
+
       html2canvas(studioNode, { 
         useCORS: true, 
         scale: window.devicePixelRatio || 2, 
         backgroundColor: isTransparent ? null : '#141418' 
       }).then(canvas => {
+        if (controls) controls.style.display = 'flex';
+        if (isTransparent) {
+          studioNode.className = origCanvasClass;
+        }
         canvas.toBlob(blob => {
           const file = new File([blob], 'islorun-workout.png', { type: 'image/png' });
           if (navigator.share) {
