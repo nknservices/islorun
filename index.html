@@ -1730,8 +1730,21 @@
     }
     
     function openRunnerProfileById(id) {
-       const runner = mockRunners.find(r => r.id === id);
-       if(runner) openRunnerProfile(runner);
+       let runner = mockRunners.find(r => r.id == id);
+       if (!runner && state.globalWorkouts) {
+           const gw = state.globalWorkouts.find(w => w.uid == id);
+           if (gw) {
+               runner = {
+                   id: gw.uid,
+                   name: gw.userName || 'Runner',
+                   avatar: gw.userAvatar || './default-avatar.png',
+                   distance: gw.distance,
+               };
+           }
+       }
+       if(runner) {
+           viewUserProfile(runner.id, runner.name, runner.avatar, (runner.distance || 0) + ' km');
+       }
     }
 
     function spawnSnapMarkers(center) {
@@ -1752,14 +1765,37 @@
         // Add 5km radar visual radius
         L.circle(center, {radius: 5000, color: '#ec4899', fillOpacity: 0.05, weight: 1}).addTo(snapMap);
 
-        // Add dummy runners around the center (5km radius approx)
+        // Add real global workouts
+        if (state.globalWorkouts) {
+            state.globalWorkouts.forEach(w => {
+                if (state.userSession && w.uid === state.userSession.uid) return;
+                
+                let pLat = center[0] + (Math.random() - 0.5) * 0.09;
+                let pLng = center[1] + (Math.random() - 0.5) * 0.09;
+                if (w.path && w.path.length > 0) {
+                    const lastP = w.path[w.path.length - 1];
+                    pLat = lastP.lat;
+                    pLng = lastP.lng;
+                }
+                
+                const icon = L.divIcon({
+                   className: 'snap-marker-bot',
+                   html: `<div class="w-10 h-10 rounded-full border-[3px] border-brandActive overflow-hidden shadow-[0_0_15px_rgba(236,72,153,0.5)] cursor-pointer bg-zinc-900 hover:scale-110 transition-transform pointer-events-auto" onclick="openRunnerProfileById('${w.uid}')"><img src="${w.userAvatar || './default-avatar.png'}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-white drop-shadow-md">${w.userName || 'Runner'}</div>`,
+                   iconSize: [40, 60],
+                   iconAnchor: [20, 20]
+                });
+                snapMarkers.push(L.marker([pLat, pLng], {icon: icon}).addTo(snapMap));
+            });
+        }
+
+        // Add dummy runners around the center
         mockRunners.forEach(r => {
            const latOffset = (Math.random() - 0.5) * 0.09;
            const lngOffset = (Math.random() - 0.5) * 0.09;
            
            const icon = L.divIcon({
               className: 'snap-marker-bot',
-              html: `<div class="w-10 h-10 rounded-full border-[3px] border-brandAccent overflow-hidden shadow-[0_0_15px_rgba(236,72,153,0.5)] cursor-pointer bg-zinc-900 hover:scale-110 transition-transform pointer-events-auto" onclick="openRunnerProfileById(${r.id})"><img src="${r.avatar}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-white drop-shadow-md">${r.name}</div>`,
+              html: `<div class="w-10 h-10 rounded-full border-[3px] border-brandAccent overflow-hidden shadow-[0_0_15px_rgba(236,72,153,0.5)] cursor-pointer bg-zinc-900 hover:scale-110 transition-transform pointer-events-auto" onclick="openRunnerProfileById('${r.id}')"><img src="${r.avatar}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-white drop-shadow-md">${r.name}</div>`,
               iconSize: [40, 60],
               iconAnchor: [20, 20]
            });
@@ -3370,14 +3406,47 @@ function setProStatus(isPro, days) {
       const list = document.getElementById('picker-history-list');
       if (!list) return;
 
-      // Update Dashboard Stats
+      // Update Dashboard Stats & Graph
       const dashDist = document.getElementById('dash-weekly-dist');
       const dashCount = document.getElementById('dash-weekly-count');
+      const dashBars = document.getElementById('dash-chart-bars');
+      
       if (dashDist && dashCount && state.workouts) {
         let totalDist = 0;
-        state.workouts.forEach(w => totalDist += parseFloat(w.distance || 0));
+        let weekCount = 0;
+        let dayTotals = [0, 0, 0, 0, 0, 0, 0]; // Mon to Sun
+        const now = new Date();
+        const todayDay = (now.getDay() || 7) - 1; // 0=Mon, 6=Sun
+        const nowMs = now.getTime();
+        
+        state.workouts.forEach(w => {
+            const t = w.id || w.timestamp || new Date(w.date).getTime();
+            const dist = parseFloat(w.distance || 0);
+            
+            // Only count in weekly sum if within 7 days
+            if (nowMs - t < 7 * 86400000) {
+                totalDist += dist;
+                weekCount++;
+                const d = new Date(t);
+                const dayIdx = (d.getDay() || 7) - 1;
+                dayTotals[dayIdx] += dist;
+            }
+        });
+        
         dashDist.innerHTML = `${totalDist.toFixed(2)} <span class="text-[10px] text-zinc-400">km</span>`;
-        dashCount.innerText = state.workouts.length;
+        dashCount.innerText = weekCount;
+        
+        if (dashBars) {
+            const maxDist = Math.max(...dayTotals, 0.1);
+            let barsHtml = '';
+            for(let i=0; i<7; i++) {
+                const height = (dayTotals[i] / maxDist) * 90;
+                const isToday = i === todayDay;
+                const activeClasses = isToday ? 'bg-brandAccent shadow-[0_0_8px_rgba(236,72,153,0.6)]' : (dayTotals[i] > 0 ? 'bg-zinc-600' : 'bg-zinc-800');
+                barsHtml += `<div class="w-full ${activeClasses} rounded-t-sm transition-all duration-700" style="height: ${Math.max(height, 5)}%"></div>`;
+            }
+            dashBars.innerHTML = barsHtml;
+        }
       }
 
       if (!state.workouts || state.workouts.length === 0) {
