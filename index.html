@@ -805,6 +805,23 @@
 
     <!-- Interactive Payment Gateway & Subscription Modal (Connected to SadaBiz Link) -->
     
+    <dialog id="user-profile-modal" class="modal bg-transparent p-0 w-full max-w-sm rounded-[30px] overflow-hidden outline-none border-none z-[1100]">
+      <div class="bg-brandCard border border-zinc-800 rounded-[30px] p-6 shadow-2xl flex flex-col items-center gap-2 text-white relative">
+        <button onclick="document.getElementById('user-profile-modal').close()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <div class="w-20 h-20 rounded-full border-2 border-brandAccent overflow-hidden mt-4 mb-2">
+          <img id="upm-avatar" src="" class="w-full h-full object-cover">
+        </div>
+        <h2 id="upm-name" class="text-xl font-black text-white uppercase tracking-wider">Name</h2>
+        <p id="upm-distance" class="text-xs text-brandAccent font-bold mb-6">0 km</p>
+        
+        <button onclick="handleMessageUser()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brandAccent to-brandActive text-black font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(236,72,153,0.25)] transition-all active:scale-98 flex items-center justify-center gap-2">
+          <i data-lucide="message-circle" class="w-4.5 h-4.5"></i> Message (Pro)
+        </button>
+      </div>
+    </dialog>
+
     <!-- PRO Upgrade Dialog -->
     <dialog id="upgrade-modal" class="modal bg-transparent p-0 w-full max-w-sm rounded-[30px] overflow-hidden outline-none border-none z-[1100]">
       <div class="bg-brandCard border border-zinc-800 rounded-[30px] p-6 shadow-2xl flex flex-col gap-5 text-white relative">
@@ -1808,139 +1825,165 @@
       renderLeaderboards();
     }
 
-         function renderLeaderboards() {
-      const container = document.getElementById('leaderboard-container');
-      const filter = state.leaderboardFilters;
-      
-      let records = [...(mockLeaderboards[filter.mode]?.[filter.timeframe] || [])];
-      
-      // Inject Real Global Users
-      if (state.globalWorkouts && state.globalWorkouts.length > 0) {
-          const now = Date.now();
-          const userAggregates = {};
-          
-          state.globalWorkouts.forEach(w => {
-              if (w.mode === filter.mode) {
-                  const t = w.timestamp || new Date(w.date).getTime();
-                  let include = false;
-                  if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
-                  if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
-                  if (filter.timeframe === 'monthly' && now - t < 30 * 86400000) include = true;
-                  
-                  if (include) {
-                      if (!userAggregates[w.uid]) {
-                          userAggregates[w.uid] = { dist: 0, time: 0, name: w.userName || 'Runner', avatar: w.userAvatar || './default-avatar.png' };
-                      }
-                      userAggregates[w.uid].dist += parseFloat(w.distance || 0);
-                      userAggregates[w.uid].time += (w.elapsedSeconds || 0) / 3600;
-                  }
-              }
-          });
-          
-          Object.keys(userAggregates).forEach(uid => {
-              // We'll let the user's local calculation override their own global row if they are logged in, 
-              // because local is more real-time. So skip the logged-in user here.
-              if (state.userSession && uid === state.userSession.uid) return;
-              
-              const agg = userAggregates[uid];
-              let userSpeed = agg.time > 0 ? (agg.dist / agg.time).toFixed(1) : 0;
-              
-              records.push({
-                  name: agg.name,
-                  distance: parseFloat(agg.dist.toFixed(1)),
-                  speed: parseFloat(userSpeed),
-                  avatar: agg.avatar,
-                  isUser: false
-              });
-          });
-      }
-      
-      // Calculate and inject current user's stats
-      if (state.userSession && state.workouts) {
-         let userDist = 0;
-         let userTime = 0;
-         const now = Date.now();
-         
-         state.workouts.forEach(w => {
-             if (w.mode === filter.mode) {
-                 const t = new Date(w.date).getTime();
-                 let include = false;
-                 if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
-                 if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
-                 if (filter.timeframe === 'monthly' && now - t < 30 * 86400000) include = true;
-                 if (include) {
-                     userDist += parseFloat(w.distance || 0);
-                     userTime += (w.elapsedSeconds || 0) / 3600;
-                 }
-             }
-         });
-         
-         // Actively include ongoing workout!
-         if (state.currentWorkout && state.currentWorkout.isActive && state.workoutMode === filter.mode) {
-             userDist += parseFloat(state.currentWorkout.distance || 0);
-             userTime += (state.currentWorkout.elapsedTime || 0) / 3600;
-         }
-         
-         // Always show them in the ranks if registered, even if 0 distance, so they see their profile
-         let userSpeed = userTime > 0 ? (userDist / userTime).toFixed(1) : 0;
-         
-         // Fetch uploaded avatar and name
-         let avatar = './default-avatar.png';
-         let name = state.userSession.name || 'You';
-         const profStr = localStorage.getItem('islorun_user_edits');
-         if (profStr) {
-             const prof = JSON.parse(profStr);
-             if (prof.img) avatar = prof.img;
-             if (prof.name) name = prof.name;
-         } else {
-             const baseProf = localStorage.getItem('islorun_profile');
-             if (baseProf) {
-                 const p = JSON.parse(baseProf);
-                 if (p.name) name = p.name;
-                 if (p.img) avatar = p.img;
-             }
-         }
-         
-         // Remove if randomly matching a dummy name
-         records = records.filter(r => r.name !== name);
-         
-         records.push({
-             name: name + " (You)",
-             distance: parseFloat(userDist.toFixed(1)),
-             speed: parseFloat(userSpeed),
-             avatar: avatar,
-             isUser: true
-         });
-      }
-      
-      if (records.length === 0) {
-        container.innerHTML = `<div class="text-center py-4 text-xs text-zinc-555">No leaderboard entries found for filter.</div>`;
-        return;
-      }
-      
-      const sorted = records.sort((a, b) => b[filter.metric] - a[filter.metric]);
-      
-      container.innerHTML = '';
-      sorted.forEach((r, idx) => {
-        const valueSuffix = filter.metric === 'distance' ? `${r.distance} km` : `${r.speed} km/h`;
-        const highlightClass = r.isUser ? 'border-brandAccent bg-brandAccent/10' : 'border-zinc-955 bg-zinc-900/60';
-        const nameColor = r.isUser ? 'text-brandAccent' : 'text-white';
+    function renderLeaderboards() {
+        const container = document.getElementById('leaderboard-container');
+        const filter = state.leaderboardFilters;
         
-        const row = document.createElement('div');
-        row.className = `flex items-center justify-between p-2 rounded-xl border ${highlightClass}`;
-        row.innerHTML = `
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-mono font-bold text-zinc-555 w-4">${idx + 1}</span>
-            <div class="w-7 h-7 rounded-full overflow-hidden border border-zinc-800 shrink-0">
-              <img src="${r.avatar}" class="w-full h-full object-cover" alt="avatar">
+        let records = [];
+        const now = Date.now();
+        const userAggregates = {};
+        
+        // Inject Real Global Users
+        if (state.globalWorkouts && state.globalWorkouts.length > 0) {
+            state.globalWorkouts.forEach(w => {
+                if (w.mode === filter.mode) {
+                    const t = w.timestamp || new Date(w.date).getTime();
+                    let include = false;
+                    if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
+                    if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
+                    if (filter.timeframe === 'monthly' && now - t < 30 * 86400000) include = true;
+                    
+                    if (include) {
+                        if (!userAggregates[w.uid]) {
+                            userAggregates[w.uid] = { uid: w.uid, dist: 0, time: 0, name: w.userName || 'Runner', avatar: w.userAvatar || './default-avatar.png' };
+                        }
+                        userAggregates[w.uid].dist += parseFloat(w.distance || 0);
+                        userAggregates[w.uid].time += (w.elapsedSeconds || 0) / 3600;
+                    }
+                }
+            });
+            
+            Object.keys(userAggregates).forEach(uid => {
+                if (state.userSession && uid === state.userSession.uid) return;
+                const agg = userAggregates[uid];
+                let userSpeed = agg.time > 0 ? (agg.dist / agg.time).toFixed(1) : 0;
+                records.push({ uid: agg.uid, name: agg.name, distance: parseFloat(agg.dist.toFixed(1)), speed: parseFloat(userSpeed), avatar: agg.avatar, isUser: false });
+            });
+        }
+        
+        // Fill remaining with dynamic dummies that fade away based on day of week
+        const dummies = mockLeaderboards[filter.mode]?.[filter.timeframe] || [];
+        const daySeed = new Date().getDate();
+        if (records.length < 10) {
+            dummies.forEach(m => {
+                // Determine if this dummy ran today based on their name length and day seed
+                if ((m.name.length + daySeed) % 2 === 0) {
+                    records.push({ uid: 'dummy_' + m.name, name: m.name, distance: parseFloat((m.distance * ((daySeed%3)+1)/3).toFixed(1)), speed: m.speed, avatar: m.avatar, isUser: false });
+                }
+            });
+        }
+        
+        // Calculate and inject current user's stats
+        if (state.userSession && state.workouts) {
+           let userDist = 0;
+           let userTime = 0;
+           
+           state.workouts.forEach(w => {
+               if (w.mode === filter.mode) {
+                   const t = new Date(w.date).getTime();
+                   let include = false;
+                   if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
+                   if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
+                   if (filter.timeframe === 'monthly' && now - t < 30 * 86400000) include = true;
+                   if (include) {
+                       userDist += parseFloat(w.distance || 0);
+                       userTime += (w.elapsedSeconds || 0) / 3600;
+                   }
+               }
+           });
+           
+           if (state.currentWorkout && state.currentWorkout.isActive && state.workoutMode === filter.mode) {
+               userDist += parseFloat(state.currentWorkout.distance || 0);
+               userTime += (state.currentWorkout.elapsedTime || 0) / 3600;
+           }
+           
+           let userSpeed = userTime > 0 ? (userDist / userTime).toFixed(1) : 0;
+           
+           let avatar = './default-avatar.png';
+           let name = state.userSession.name || 'You';
+           const profStr = localStorage.getItem('islorun_user_edits');
+           if (profStr) {
+               const prof = JSON.parse(profStr);
+               if (prof.img) avatar = prof.img;
+               if (prof.name) name = prof.name;
+           } else {
+               const baseProf = localStorage.getItem('islorun_profile');
+               if (baseProf) {
+                   const p = JSON.parse(baseProf);
+                   if (p.name) name = p.name;
+                   if (p.img) avatar = p.img;
+               }
+           }
+           
+           records = records.filter(r => r.name !== name);
+           records.push({ uid: state.userSession.uid, name: name + " (You)", distance: parseFloat(userDist.toFixed(1)), speed: parseFloat(userSpeed), avatar: avatar, isUser: true });
+        }
+        
+        if (records.length === 0) {
+          container.innerHTML = `<div class="text-center py-4 text-xs text-zinc-555">No leaderboard entries found for filter.</div>`;
+          return;
+        }
+        
+        const sorted = records.sort((a, b) => b[filter.metric] - a[filter.metric]);
+        
+        // Find user rank
+        let userRank = -1;
+        if (state.userSession) {
+            userRank = sorted.findIndex(r => r.isUser);
+        }
+        
+        // Slice top 10
+        const top10 = sorted.slice(0, 10);
+        
+        // If user is outside top 10, append them
+        if (userRank >= 10) {
+            top10.push(sorted[userRank]);
+        }
+        
+        container.innerHTML = '';
+        top10.forEach((r, idx) => {
+          const actualRank = r.isUser && userRank >= 10 ? userRank + 1 : idx + 1;
+          const valueSuffix = filter.metric === 'distance' ? `${r.distance} km` : `${r.speed} km/h`;
+          const highlightClass = r.isUser ? 'border-brandAccent bg-brandAccent/10' : 'border-zinc-955 bg-zinc-900/60 cursor-pointer hover:border-brandActive transition-colors';
+          const nameColor = r.isUser ? 'text-brandAccent' : 'text-white';
+          
+          const row = document.createElement('div');
+          row.className = `flex items-center justify-between p-2 rounded-xl border ${highlightClass}`;
+          if (!r.isUser) {
+              row.onclick = () => viewUserProfile(r.uid, r.name, r.avatar, valueSuffix);
+          }
+          row.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-mono font-bold text-zinc-555 w-4">${actualRank}</span>
+              <div class="w-7 h-7 rounded-full overflow-hidden border border-zinc-800 shrink-0">
+                <img src="${r.avatar}" class="w-full h-full object-cover" alt="avatar">
+              </div>
+              <span class="text-xs font-extrabold ${nameColor}">${r.name}</span>
             </div>
-            <span class="text-xs font-extrabold ${nameColor}">${r.name}</span>
-          </div>
-          <span class="text-[10px] font-black tracking-widest text-zinc-400 uppercase">${valueSuffix}</span>
-        `;
-        container.appendChild(row);
-      });
-    }
+            <span class="text-[10px] font-black tracking-widest text-zinc-400 uppercase">${valueSuffix}</span>
+          `;
+          container.appendChild(row);
+        });
+        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+
+      function viewUserProfile(uid, name, avatar, distanceTxt) {
+          state.viewingUser = { uid, name };
+          document.getElementById('upm-avatar').src = avatar;
+          document.getElementById('upm-name').innerText = name.replace(' (You)', '');
+          document.getElementById('upm-distance').innerText = distanceTxt + " in mode";
+          document.getElementById('user-profile-modal').showModal();
+      }
+      
+      function handleMessageUser() {
+          if (!state.isPro) {
+              document.getElementById('user-profile-modal').close();
+              openUpgradeModal();
+          } else {
+              alert("Messaging Interface Initializing... (Coming Soon!)");
+          }
+      }
 
     // --- FITNESS TRACKING ENGINE (Live State Machine) ---
     function setWorkoutMode(mode) {
