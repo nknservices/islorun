@@ -696,7 +696,7 @@
                 </button>
                 <span id="settings-pro-pill" class="hidden px-2 py-0.5 rounded-full bg-gradient-to-r from-brandAccent to-brandActive text-[8px] font-black uppercase text-black">PRO</span>
               </div>
-              <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p>
+              <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p><p class="text-[10px] text-brandAccent font-bold mt-1 uppercase tracking-widest hidden" id="profile-my-followers">0 Followers</p>
             </div>
           </div>
 
@@ -764,23 +764,6 @@
             </div>
           </div>
         </div>
-
-        <!-- App Configuration Settings (Firebase configuration verification keys) -->
-        <div class="flex flex-col gap-2 bg-[#0e0e12] border border-zinc-900 rounded-2xl p-4 text-xs select-none">
-          <span class="font-extrabold text-[10px] text-zinc-400 uppercase tracking-widest mb-1">Firebase Sync Panel</span>
-          <div class="flex flex-col gap-1">
-            <textarea id="firebase-config-input" rows="3" placeholder='Paste your Firebase config JSON here...' class="w-full bg-zinc-950 border border-zinc-900 rounded-xl p-2.5 font-mono text-[9px] text-zinc-300 focus:outline-none focus:border-brandAccent"></textarea>
-            <button onclick="saveFirebaseConfig()" class="w-full py-1.5 mt-1 bg-zinc-900 hover:bg-zinc-850 rounded-xl text-[10px] font-black uppercase text-brandAccent border border-brandAccent/25">Save Config & Reload</button>
-          </div>
-          <div class="flex justify-between text-zinc-550 pt-2 border-t border-zinc-900 mt-2">
-            <span>App Version</span>
-            <span>2.6.0 (PWA & SadaBiz Integrations)</span>
-          </div>
-          <button onclick="resetAppDatabase()" class="mt-2 text-center text-red-500 hover:text-red-400 text-[10px] font-bold uppercase border-t border-zinc-900 pt-3">
-            Reset Cache & Database
-          </button>
-        </div>
-      </div>
 
     </main>
 
@@ -1299,7 +1282,7 @@
             db.collection('users').doc(user.uid).onSnapshot(doc => {
                if (doc.exists) {
                    const data = doc.data();
-                   if (data.isPro === true) {
+                   const followersEl = document.getElementById('profile-my-followers'); if (followersEl) { followersEl.classList.remove('hidden'); followersEl.innerText = (data.followers ? data.followers.length : 0) + ' Followers'; } if (data.isPro === true) {
                        // Check 30-day expiration
                        let grantedMs = Date.now();
                        if (data.proGrantedDate) {
