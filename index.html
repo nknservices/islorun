@@ -1250,6 +1250,18 @@
         }
         db = firebase.firestore(firebaseApp);
         auth = firebase.auth(firebaseApp);
+          // REAL-TIME RADAR SYNC
+          db.collection('global_workouts').onSnapshot(snap => {
+              let gw = [];
+              snap.forEach(doc => gw.push(doc.data()));
+              state.globalWorkouts = gw;
+              if (state.activeTab === 'leaderboard' && typeof renderLeaderboards === 'function') renderLeaderboards();
+              if (state.activeTab === 'radar' && typeof snapMap !== 'undefined' && snapMap && typeof spawnSnapMarkers === 'function') {
+                  snapMarkers.forEach(m => snapMap.removeLayer(m));
+                  snapMarkers = [];
+                  spawnSnapMarkers([snapMap.getCenter().lat, snapMap.getCenter().lng]);
+              }
+          });
         document.getElementById('auth-connection-status').innerText = "☁️ Firebase Connected";
         
         // Listen for real Firebase auth states
@@ -1737,7 +1749,7 @@
         snapMarkers.push(L.marker(center, {icon: userIcon, zIndexOffset: 1000}).addTo(snapMap));
         
         // Add 5km radar visual radius
-        L.circle(center, {radius: 5000, color: '#ec4899', fillOpacity: 0.05, weight: 1}).addTo(snapMap);
+        L.circle(center, {radius: 5000, color: '#22c55e', fillOpacity: 0.1, weight: 1}).addTo(snapMap);
 
         // Add real global workouts
         if (state.globalWorkouts) {
@@ -3675,3 +3687,8 @@ initFirebase(JSON.stringify(hardcodedFirebaseConfig));
 </script>
 </body>
 </html>
+
+
+
+
+
