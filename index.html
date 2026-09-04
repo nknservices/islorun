@@ -1884,7 +1884,7 @@
         if (state.globalWorkouts && state.globalWorkouts.length > 0) {
             state.globalWorkouts.forEach(w => {
                 if (w.mode === filter.mode) {
-                    const t = w.timestamp || new Date(w.date).getTime();
+                    const t = w.id || w.timestamp || new Date(w.date).getTime();
                     let include = false;
                     if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
                     if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
@@ -1927,7 +1927,7 @@
            
            state.workouts.forEach(w => {
                if (w.mode === filter.mode) {
-                   const t = new Date(w.date).getTime();
+                   const t = w.id || w.timestamp || new Date(w.date).getTime();
                    let include = false;
                    if (filter.timeframe === 'daily' && now - t < 86400000) include = true;
                    if (filter.timeframe === 'weekly' && now - t < 7 * 86400000) include = true;
