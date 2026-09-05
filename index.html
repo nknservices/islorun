@@ -706,7 +706,7 @@
                 </button>
                 <span id="settings-pro-pill" class="hidden px-2 py-0.5 rounded-full bg-gradient-to-r from-brandAccent to-brandActive text-[8px] font-black uppercase text-black">PRO</span>
               </div>
-              <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p><p class="text-[10px] text-brandAccent font-bold mt-1 uppercase tracking-widest hidden" id="profile-my-followers" style="cursor:pointer;" onclick="viewMyFollowers()">0 Followers</p>
+              <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p><div id="profile-notif-badge" class="hidden absolute top-4 right-14 w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_#ef4444]"></div><p class="text-[10px] text-brandAccent font-bold mt-1 uppercase tracking-widest hidden" id="profile-my-followers" style="cursor:pointer;" onclick="viewMyFollowers()">0 Followers</p>
             </div>
           </div>
 
@@ -1287,6 +1287,28 @@
             const session = { email: user.email, name: user.displayName || user.email.split('@')[0], uid: user.uid };
             localStorage.setItem('islorun_user', JSON.stringify(session));
             state.userSession = session;
+
+              const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+              const notifsRef = db.collection('users').doc(user.uid).collection('notifications');
+              let isInitialLoad = true;
+              
+              notifsRef.where('timestamp', '>', weekAgo).onSnapshot(snap => {
+                 snap.docChanges().forEach(change => {
+                     if (change.type === 'added') {
+                         const d = change.doc.data();
+                         const badge = document.getElementById('profile-notif-badge');
+                         if(badge) badge.classList.remove('hidden');
+                         
+                         if (!isInitialLoad) {
+                             if (d.type === 'follow') {
+                                 alert(d.name + ' just started following you!');
+                             }
+                         }
+                     }
+                 });
+                 isInitialLoad = false;
+              });
+
             
             // Restore profile data from Firestore
             db.collection('users').doc(user.uid).get().then(doc => {
@@ -1929,7 +1951,32 @@
         }
     }
 
-    function closeRunnerProfile() {
+    
+    function viewMyFollowers() {
+       if (!db || !state.userSession) return;
+       db.collection('users').doc(state.userSession.uid).get().then(doc => {
+           const data = doc.data();
+           if (data && data.followers && data.followers.length > 0) {
+               let h = '<div class="flex justify-between items-center mb-2"><span class="text-sm font-black uppercase text-brandAccent">Your Followers (' + data.followers.length + ')</span></div><div class="flex flex-col gap-2 max-h-60 overflow-y-auto">';
+               const allGw = state.globalWorkouts || [];
+               data.followers.forEach(fUid => {
+                   const gwMatch = allGw.find(w => w.uid === fUid);
+                   const fName = gwMatch ? (gwMatch.userName || 'Runner') : "Runner " + fUid.substring(0, 5);
+                   const fAvatar = gwMatch ? gwMatch.userAvatar : "./default-avatar.png";
+                   h += '<div class="p-3 bg-zinc-900 border border-zinc-800 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-zinc-800 transition-colors" onclick="openRunnerProfileById(\'' + fUid + '\')"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700"><img src="' + fAvatar + '" class="w-full h-full object-cover"></div><span class="text-xs font-bold text-white">' + fName + '</span></div><i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500"></i></div>';
+               });
+               h += '</div>';
+               
+               document.getElementById('runner-sheet-content').innerHTML = h;
+               if(typeof lucide !== 'undefined') lucide.createIcons();
+               document.getElementById('runner-bottom-sheet').classList.remove('translate-y-full');
+           } else {
+               alert("You don't have any followers yet.");
+           }
+       });
+    }
+
+function closeRunnerProfile() {
       document.getElementById('runner-bottom-sheet').classList.add('translate-y-full');
     }
 
