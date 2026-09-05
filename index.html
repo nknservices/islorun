@@ -1490,6 +1490,7 @@
                  state.workouts = merged;
                  localStorage.setItem('islorun_workouts', JSON.stringify(state.workouts));
                  if(typeof renderPickerHistory !== 'undefined') renderPickerHistory();
+        if(typeof renderBadges !== 'undefined') renderBadges();
                  renderLeaderboards();
              }
          }).catch(e => console.log('Silent cloud pull fail:', e));
@@ -1500,6 +1501,7 @@
     function saveWorkouts() {
       localStorage.setItem('islorun_workouts', JSON.stringify(state.workouts));
       if(typeof renderPickerHistory !== 'undefined') renderPickerHistory();
+        if(typeof renderBadges !== 'undefined') renderBadges();
       
       // Auto-push to cloud if logged in
       if (typeof db !== 'undefined' && state.userSession && state.userSession.uid) {
@@ -1771,8 +1773,8 @@
             state.globalWorkouts.forEach(w => {
                 if (state.userSession && w.uid === state.userSession.uid) return;
                 
-                let pLat = center[0] + (Math.random() - 0.5) * 0.09;
-                let pLng = center[1] + (Math.random() - 0.5) * 0.09;
+                let pLat = center[0] + (Math.random() - 0.5) * 0.002;
+                let pLng = center[1] + (Math.random() - 0.5) * 0.002;
                 if (w.path && w.path.length > 0) {
                     const lastP = w.path[w.path.length - 1];
                     // Micro-jitter so users in the exact same room don't perfectly overlap
@@ -1792,8 +1794,8 @@
 
         // Add dummy runners around the center
         mockRunners.forEach(r => {
-           const latOffset = (Math.random() - 0.5) * 0.09;
-           const lngOffset = (Math.random() - 0.5) * 0.09;
+           const latOffset = (Math.random() - 0.5) * 0.002;
+           const lngOffset = (Math.random() - 0.5) * 0.002;
            
            const icon = L.divIcon({
               className: 'snap-marker-blip',
@@ -1869,14 +1871,62 @@
       lucide.createIcons();
     }
 
-    function toggleFollowRunner(id) {
-      if (state.followedRunners.includes(id)) {
-        state.followedRunners = state.followedRunners.filter(f => f !== id);
-      } else {
-        state.followedRunners.push(id);
-      }
-      closeRunnerProfile();
-      alert("Follow relationships updated in Firestore profile!");
+    function toggleFollowRunner(overrideUid) {
+        if (!state.userSession) return alert("Please log in to follow runners!");
+        const targetUid = overrideUid || (state.viewingUser ? state.viewingUser.uid : null);
+        if (!targetUid) return;
+        const myUid = state.userSession.uid;
+        
+        let isFollowing = followingUsers.includes(targetUid);
+        if (isFollowing) {
+            followingUsers = followingUsers.filter(x => x !== targetUid);
+        } else {
+            followingUsers.push(targetUid);
+        }
+        localStorage.setItem('islorun_following', JSON.stringify(followingUsers));
+        state.followedRunners = followingUsers;
+        
+        if (typeof db !== 'undefined') {
+            if (isFollowing) {
+                db.collection('users').doc(targetUid).update({
+                    followers: firebase.firestore.FieldValue.arrayRemove(myUid)
+                }).catch(e => console.log(e));
+            } else {
+                db.collection('users').doc(targetUid).update({
+                    followers: firebase.firestore.FieldValue.arrayUnion(myUid)
+                }).then(() => {
+                    db.collection('users').doc(targetUid).collection('notifications').add({
+                        type: 'follow',
+                        uid: myUid,
+                        name: state.userSession.name || 'A runner',
+                        timestamp: Date.now()
+                    });
+                }).catch(e => {
+                    db.collection('users').doc(targetUid).set({ followers: [myUid] }, {merge: true}).then(() => {
+                        db.collection('users').doc(targetUid).collection('notifications').add({
+                            type: 'follow',
+                            uid: myUid,
+                            name: state.userSession.name || 'A runner',
+                            timestamp: Date.now()
+                        });
+                    });
+                });
+            }
+        }
+        
+        if(document.getElementById('runner-bottom-sheet') && !document.getElementById('runner-bottom-sheet').classList.contains('translate-y-full')) {
+            closeRunnerProfile();
+        }
+        const btn = document.getElementById('upm-follow-btn');
+        if (btn && state.viewingUser && state.viewingUser.uid === targetUid) {
+            btn.innerText = isFollowing ? "Follow" : "Following";
+            btn.className = isFollowing ? "flex-1 py-3 rounded-xl bg-brandAccent text-white font-black text-xs uppercase tracking-wider transition-all" : "flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-400 font-black text-xs uppercase tracking-wider transition-all";
+            
+            const followersEl = document.getElementById('upm-followers');
+            let currentCount = parseInt(followersEl.innerText) || 0;
+            currentCount = isFollowing ? Math.max(0, currentCount - 1) : currentCount + 1;
+            followersEl.innerText = currentCount + ' Followers';
+        }
     }
 
     function closeRunnerProfile() {
@@ -2100,41 +2150,7 @@
           document.getElementById('user-profile-modal').showModal();
       }
       
-      function toggleFollowRunner() {
-          if (!state.userSession) return alert("Please log in to follow runners!");
-          const uid = state.viewingUser.uid;
-          const myUid = state.userSession.uid;
-          
-          const isFollowing = followingUsers.includes(uid);
-          if (isFollowing) {
-              followingUsers = followingUsers.filter(x => x !== uid);
-          } else {
-              followingUsers.push(uid);
-          }
-          localStorage.setItem('islorun_following', JSON.stringify(followingUsers));
-          
-          if (typeof db !== 'undefined') {
-              if (isFollowing) {
-                  db.collection('users').doc(uid).update({
-                      followers: firebase.firestore.FieldValue.arrayRemove(myUid)
-                  }).catch(e => console.log(e));
-              } else {
-                  db.collection('users').doc(uid).update({
-                      followers: firebase.firestore.FieldValue.arrayUnion(myUid)
-                  }).catch(e => {
-                      db.collection('users').doc(uid).set({ followers: [myUid] }, {merge: true});
-                  });
-              }
-          }
-          
-          // Re-render modal buttons & update count optimistically
-          const followersEl = document.getElementById('upm-followers');
-          let currentCount = parseInt(followersEl.innerText) || 0;
-          currentCount = isFollowing ? Math.max(0, currentCount - 1) : currentCount + 1;
-          followersEl.innerText = currentCount + ' Followers';
-          
-          viewUserProfile(uid, state.viewingUser.name, state.viewingUser.avatar, document.getElementById('upm-distance').innerText.replace(' in mode', ''));
-      }
+
       
       function openChat() {
           alert("Chat coming soon!");
@@ -3701,6 +3717,8 @@ initFirebase(JSON.stringify(hardcodedFirebaseConfig));
 </script>
 </body>
 </html>
+
+
 
 
 
