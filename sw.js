@@ -1,4 +1,4 @@
-const CACHE_NAME = 'islorun-shell-v30';
+const CACHE_NAME = 'islorun-shell-v31';
 const MAP_CACHE = 'islorun-map-tiles-v2';
 
 // Files that make up the app shell — cached at install so the app
