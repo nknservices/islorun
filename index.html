@@ -706,7 +706,7 @@
                 </button>
                 <span id="settings-pro-pill" class="hidden px-2 py-0.5 rounded-full bg-gradient-to-r from-brandAccent to-brandActive text-[8px] font-black uppercase text-black">PRO</span>
               </div>
-              <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p><p class="text-[10px] text-brandAccent font-bold mt-1 uppercase tracking-widest hidden" id="profile-my-followers">0 Followers</p>
+              <p class="text-[10px] text-zinc-550 truncate mt-1" id="profile-user-email">runner@islorun.com</p><p class="text-[10px] text-brandAccent font-bold mt-1 uppercase tracking-widest hidden" id="profile-my-followers" style="cursor:pointer;" onclick="viewMyFollowers()">0 Followers</p>
             </div>
           </div>
 
@@ -1757,9 +1757,9 @@
         
         const userIcon = L.divIcon({
           className: 'snap-marker-user',
-          html: `<div class="w-12 h-12 rounded-full border-[3px] border-green-500 overflow-hidden shadow-[0_0_20px_rgba(34,197,94,0.6)] bg-zinc-900"><img src="${userSrc}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-green-400 drop-shadow-md">YOU</div>`,
-          iconSize: [48, 60],
-          iconAnchor: [24, 24]
+            html: <div class="relative flex items-center justify-center"><div class="absolute w-8 h-8 bg-green-500 rounded-full animate-ping opacity-50"></div><div class="w-4 h-4 rounded-full bg-white shadow-[0_0_20px_#fff] border-2 border-green-500 z-10 relative"></div></div><div class="text-[10px] font-black text-center mt-2 text-white drop-shadow-[0_0_5px_#4ade80] tracking-widest">YOU</div>,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
         });
         snapMarkers.push(L.marker(center, {icon: userIcon, zIndexOffset: 1000}).addTo(snapMap));
         
@@ -1781,12 +1781,12 @@
                 }
                 
                 const icon = L.divIcon({
-                   className: 'snap-marker-bot',
-                   html: `<div class="w-10 h-10 rounded-full border-[3px] border-brandActive overflow-hidden shadow-[0_0_15px_rgba(236,72,153,0.5)] cursor-pointer bg-zinc-900 hover:scale-110 transition-transform pointer-events-auto" onclick="openRunnerProfileById('${w.uid}')"><img src="${w.userAvatar || './default-avatar.png'}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-white drop-shadow-md">${w.userName || 'Runner'}</div>`,
-                   iconSize: [40, 60],
-                   iconAnchor: [20, 20]
-                });
-                snapMarkers.push(L.marker([pLat, pLng], {icon: icon}).addTo(snapMap));
+                   className: 'snap-marker-blip',
+                     html: <div class="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_15px_#4ade80] animate-pulse border border-white cursor-pointer pointer-events-auto" onclick="openRunnerProfileById('${w.uid}')"></div><div class="text-[8px] font-black text-center mt-1 text-green-400 drop-shadow-md tracking-wider">${w.userName || 'Runner'}</div>,
+                     iconSize: [20, 30],
+                     iconAnchor: [10, 10]
+                  });
+                  snapMarkers.push(L.marker([pLat, pLng], {icon: icon, zIndexOffset: 999}).addTo(snapMap));
             });
         }
 
@@ -1796,13 +1796,12 @@
            const lngOffset = (Math.random() - 0.5) * 0.09;
            
            const icon = L.divIcon({
-              className: 'snap-marker-bot',
-              html: `<div class="w-10 h-10 rounded-full border-[3px] border-brandAccent overflow-hidden shadow-[0_0_15px_rgba(236,72,153,0.5)] cursor-pointer bg-zinc-900 hover:scale-110 transition-transform pointer-events-auto" onclick="openRunnerProfileById('${r.id}')"><img src="${r.avatar}" class="w-full h-full object-cover"></div><div class="text-[9px] font-black text-center mt-1 text-white drop-shadow-md">${r.name}</div>`,
-              iconSize: [40, 60],
-              iconAnchor: [20, 20]
-           });
-           
-           snapMarkers.push(L.marker([center[0] + latOffset, center[1] + lngOffset], {icon: icon}).addTo(snapMap));
+              className: 'snap-marker-blip',
+                html: <div class="w-3 h-3 rounded-full bg-green-400/70 shadow-[0_0_10px_rgba(74,222,128,0.5)] border border-green-200/50 cursor-pointer pointer-events-auto" onclick="openRunnerProfileById('${r.id}')"></div><div class="text-[8px] font-black text-center mt-1 text-green-500/70 drop-shadow-md tracking-wider">${r.name}</div>,
+                iconSize: [20, 30],
+                iconAnchor: [10, 10]
+             });
+             snapMarkers.push(L.marker([center[0] + latOffset, center[1] + lngOffset], {icon: icon, zIndexOffset: 800}).addTo(snapMap));
         });
     }
 
@@ -3702,6 +3701,10 @@ initFirebase(JSON.stringify(hardcodedFirebaseConfig));
 </script>
 </body>
 </html>
+
+
+
+
 
 
 
