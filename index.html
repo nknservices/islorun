@@ -102,6 +102,7 @@
       display: flex;
     }
   @keyframes radar-sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .dark-map-tiles { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
   </style>
 </head>
 <body class="bg-slate-950 min-h-[100dvh] flex items-center justify-center font-sans antialiased text-white p-0 md:p-4 select-none">
@@ -1707,10 +1708,7 @@
       try {
       if (!map) {
         map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 16);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap',
-          maxZoom: 19
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles' }).addTo(map);
         polyline = L.polyline([], {color: '#007AFF', weight: 6}).addTo(map);
         
         const blueDot = L.divIcon({
@@ -1819,9 +1817,7 @@
     function initSnapMap() {
         if (!snapMap) {
             snapMap = L.map('snap-radar-map', { zoomControl: false, attributionControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-              maxZoom: 19
-            }).addTo(snapMap);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles' }).addTo(snapMap);
         }
         
         let center = [33.7294, 73.0931]; // Default Islamabad
