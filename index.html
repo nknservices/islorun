@@ -449,16 +449,7 @@
             <span class="text-green-400 font-bold text-sm tracking-widest animate-pulse uppercase">Scanning Area...</span>
         </div>
 
-
-        <!-- Runner Detail Slide-up Panel -->
-        <div id="runner-bottom-sheet" class="absolute bottom-0 left-0 right-0 transform translate-y-full transition-transform duration-300 z-50 bg-brandCard border-t border-zinc-800 rounded-t-[30px] p-5 shadow-2xl flex flex-col gap-4">
-          <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto cursor-pointer" onclick="closeRunnerProfile()"></div>
-          <div id="runner-sheet-content" class="flex flex-col gap-4">
-            <!-- Details generated dynamically -->
-          </div>
-        </div>
-        
-        <!-- Chat Panel overlay inside Radar (Messaging only for paid users) -->
+<!-- Chat Panel overlay inside Radar (Messaging only for paid users) -->
         <div id="chat-overlay" class="absolute inset-0 bg-brandDark/95 z-50 hidden flex-col transition-all">
           <div class="h-14 border-b border-zinc-900 px-5 flex items-center justify-between">
             <div class="flex items-center gap-2.5">
@@ -777,7 +768,15 @@
 
     </main>
 
-    <!-- Bottom Navigation Bar (5-tab responsive grid layout) -->
+          <!-- Global Slide-up Sheet for Runners/Followers -->
+      <div id="runner-bottom-sheet" class="absolute bottom-0 left-0 right-0 transform translate-y-full transition-transform duration-300 z-[900] bg-brandCard border-t border-zinc-800 rounded-t-[30px] p-5 pb-8 shadow-2xl flex flex-col gap-4 max-h-[80vh]">
+          <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto cursor-pointer" onclick="closeRunnerProfile()"></div>
+          <div id="runner-sheet-content" class="flex flex-col gap-4 overflow-y-auto">
+            <!-- Details generated dynamically -->
+          </div>
+      </div>
+      
+      <!-- Bottom Navigation Bar (5-tab responsive grid layout) -->
       <nav class="h-18 border-t border-zinc-900 bg-brandDark/95 backdrop-blur-md px-1 flex justify-between items-center select-none flex-shrink-0 z-[1000]" style="padding-bottom: max(12px, env(safe-area-inset-bottom));">
         <button onclick="switchTab('track')" id="nav-track" class="nav-item flex flex-col items-center justify-center gap-1 py-1.5 flex-1 text-brandAccent">
           <i data-lucide="map" class="w-5 h-5"></i>
@@ -3672,8 +3671,32 @@ function setProStatus(isPro, days) {
       if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
-          document.getElementById('profile-user-img').src = evt.target.result;
-          saveProfileEdits();
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 250;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            document.getElementById('profile-user-img').src = dataUrl;
+            saveProfileEdits();
+          }
+          img.src = evt.target.result;
         }
         reader.readAsDataURL(file);
       }
