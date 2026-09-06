@@ -1702,22 +1702,33 @@
     let map = null;
     let polyline = null;
 
+    let currentLocationMarker = null;
     function drawTrackCanvas() {
       try {
-      // Replaced by Leaflet
       if (!map) {
-        map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 15);
+        map = L.map('active-track-map', { zoomControl: false }).setView([33.7299, 73.0746], 16);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap &copy; CARTO',
+          attribution: '&copy; OpenStreetMap',
           maxZoom: 19
         }).addTo(map);
         polyline = L.polyline([], {color: '#007AFF', weight: 6}).addTo(map);
+        
+        const blueDot = L.divIcon({
+            className: 'current-location-dot',
+            html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_#3b82f6]"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+        currentLocationMarker = L.marker([33.7299, 73.0746], {icon: blueDot, zIndexOffset: 1000}).addTo(map);
       }
       
-      if (state.currentWorkout.path && state.currentWorkout.path.length > 0) {
+      if (state.currentWorkout && state.currentWorkout.path && state.currentWorkout.path.length > 0) {
         const latlngs = state.currentWorkout.path.map(p => [p.lat, p.lng]);
         polyline.setLatLngs(latlngs);
-        map.fitBounds(polyline.getBounds());
+        
+        const lastPoint = latlngs[latlngs.length - 1];
+        currentLocationMarker.setLatLng(lastPoint);
+        map.setView(lastPoint, 16, { animate: true, duration: 0.5 });
       }
     } catch(err) { console.error("Map Error:", err); }
     }
@@ -2359,7 +2370,7 @@ function closeRunnerProfile() {
       } else {
         if (navigator.geolocation) {
           w.watchId = navigator.geolocation.watchPosition((pos) => {
-             if (pos.coords.accuracy > 20) return;
+             if (pos.coords.accuracy > 40) return;
              const latitude = pos.coords.latitude;
              const longitude = pos.coords.longitude;
              w.path.push({lat: latitude, lng: longitude});
