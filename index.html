@@ -2364,9 +2364,9 @@ function closeRunnerProfile() {
       if (state.isGPSSimulation) {
         w.simId = setInterval(updateSimulationTick, 1000);
       } else {
-        if (navigator.geolocation) {
+          if (navigator.geolocation) {
           w.watchId = navigator.geolocation.watchPosition((pos) => {
-             if (pos.coords.accuracy > 40) return;
+             if (pos.coords.accuracy > 25) return;
              const latitude = pos.coords.latitude;
              const longitude = pos.coords.longitude;
              w.path.push({lat: latitude, lng: longitude});
@@ -2525,16 +2525,18 @@ function closeRunnerProfile() {
       workout.elapsedTime = Math.floor((Date.now() - workout.startTime) / 1000);
       document.getElementById('hud-time').innerText = formatTime(workout.elapsedTime);
 
-      mockRouteIndex = (mockRouteIndex + 1) % isloSimPath.length;
-      const pt = isloSimPath[mockRouteIndex];
-      
-      const prev = workout.path[workout.path.length - 1];
-      if (prev) {
-        const stepD = calculateDistance(prev.lat, prev.lng, pt.lat, pt.lng);
-        workout.distance += stepD;
-        document.getElementById('hud-distance').innerText = workout.distance.toFixed(2);
+      if (state.isGPSSimulation) {
+          mockRouteIndex = (mockRouteIndex + 1) % isloSimPath.length;
+          const pt = isloSimPath[mockRouteIndex];
+          
+          const prev = workout.path[workout.path.length - 1];
+          if (prev) {
+            const stepD = calculateDistance(prev.lat, prev.lng, pt.lat, pt.lng);
+            workout.distance += stepD;
+            document.getElementById('hud-distance').innerText = workout.distance.toFixed(2);
+          }
+          workout.path.push(pt);
       }
-      workout.path.push(pt);
       
       drawTrackCanvas();
 
@@ -2542,20 +2544,18 @@ function closeRunnerProfile() {
         const paceSecs = workout.elapsedTime / workout.distance;
         workout.pace = formatPace(paceSecs);
       
-      // Sim steps
-      let stepsPerKm = 1320;
-      if (state.workoutMode === 'walking') stepsPerKm = 1400;
-      if (state.workoutMode === 'hiking') stepsPerKm = 1450;
-      if (state.workoutMode === 'cycling') stepsPerKm = 0;
-      workout.steps = Math.floor(workout.distance * stepsPerKm);
-      document.getElementById('hud-steps').innerText = workout.steps;
-
+        let stepsPerKm = 1320;
+        if (state.workoutMode === 'walking') stepsPerKm = 1400;
+        if (state.workoutMode === 'hiking') stepsPerKm = 1450;
+        if (state.workoutMode === 'cycling') stepsPerKm = 0;
+        workout.steps = Math.floor(workout.distance * stepsPerKm);
+        
         document.getElementById('hud-pace').innerText = workout.pace;
       } else {
         workout.pace = "--'--";
       }
 
-      if (state.workoutMode !== 'cycling') {
+      if (state.isGPSSimulation && state.workoutMode !== 'cycling') {
         workout.steps += Math.floor(2.2 + Math.random() * 0.8);
       }
       
@@ -2573,7 +2573,6 @@ function closeRunnerProfile() {
           calSteps = steps * 0.06 * (weight / 70);
       }
       workout.calories = Math.floor(Math.max(calDist, calSteps, workout.elapsedTime * (state.workoutMode === 'running' ? 0.16 : 0.08)));
-
       
       document.getElementById('hud-steps').innerText = workout.steps.toLocaleString();
       document.getElementById('hud-calories').innerText = workout.calories;
