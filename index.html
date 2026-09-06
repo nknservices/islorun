@@ -768,7 +768,22 @@
 
     </main>
 
-          <!-- Global Slide-up Sheet for Runners/Followers -->
+          
+    <!-- Full-Screen Followers List -->
+    <div id="followers-fullscreen" class="fixed inset-0 bg-brandDark z-[9999] hidden flex-col transform transition-transform duration-300 translate-x-full">
+      <div class="h-16 border-b border-zinc-900 px-5 flex items-center justify-between shrink-0 bg-brandDark/95 backdrop-blur-md">
+        <button onclick="closeFollowersScreen()" class="p-2 -ml-2 text-zinc-400 hover:text-white flex items-center gap-2 font-bold">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+        </button>
+        <span class="font-black text-sm uppercase tracking-widest text-white">Your Followers</span>
+        <div class="w-8"></div>
+      </div>
+      <div id="followers-fullscreen-content" class="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
+        <!-- Followers populated here -->
+      </div>
+    </div>
+
+      <!-- Global Slide-up Sheet for Runners/Followers -->
       <div id="runner-bottom-sheet" class="absolute bottom-0 left-0 right-0 transform translate-y-full transition-transform duration-300 z-[900] bg-brandCard border-t border-zinc-800 rounded-t-[30px] p-5 pb-8 shadow-2xl flex flex-col gap-4 max-h-[80vh]">
           <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto cursor-pointer" onclick="closeRunnerProfile()"></div>
           <div id="runner-sheet-content" class="flex flex-col gap-4 overflow-y-auto">
@@ -2003,27 +2018,37 @@
 
     
     function viewMyFollowers() {
-       if (!db || !state.userSession) return;
-       db.collection('users').doc(state.userSession.uid).get().then(doc => {
-           const data = doc.data();
-           if (data && data.followers && data.followers.length > 0) {
-               let h = '<div class="flex justify-between items-center mb-2"><span class="text-sm font-black uppercase text-brandAccent">Your Followers (' + data.followers.length + ')</span></div><div class="flex flex-col gap-2 max-h-60 overflow-y-auto">';
-               const allGw = state.globalWorkouts || [];
-               data.followers.forEach(fUid => {
-                   const gwMatch = allGw.find(w => w.uid === fUid);
-                   const fName = gwMatch ? (gwMatch.userName || 'Runner') : "Runner " + fUid.substring(0, 5);
-                   const fAvatar = gwMatch ? gwMatch.userAvatar : "./default-avatar.png";
-                   h += '<div class="p-3 bg-zinc-900 border border-zinc-800 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-zinc-800 transition-colors" onclick="openRunnerProfileById(\'' + fUid + '\')"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700"><img src="' + fAvatar + '" class="w-full h-full object-cover"></div><span class="text-xs font-bold text-white">' + fName + '</span></div><i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500"></i></div>';
-               });
-               h += '</div>';
-               
-               document.getElementById('runner-sheet-content').innerHTML = h;
-               if(typeof lucide !== 'undefined') lucide.createIcons();
-               document.getElementById('runner-bottom-sheet').classList.remove('translate-y-full');
-           } else {
-               alert("You don't have any followers yet.");
-           }
-       });
+         if (!db || !state.userSession) return;
+         db.collection('users').doc(state.userSession.uid).get().then(doc => {
+             const data = doc.data();
+             if (data && data.followers && data.followers.length > 0) {
+                 let h = '';
+                 const allGw = state.globalWorkouts || [];
+                 data.followers.forEach(fUid => {
+                     const gwMatch = allGw.find(w => w.uid === fUid);
+                     const fName = gwMatch ? (gwMatch.userName || 'Runner') : "Runner " + fUid.substring(0, 5);
+                     const fAvatar = gwMatch ? gwMatch.userAvatar : "./default-avatar.png";
+                     h += '<div class="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-zinc-800 transition-colors" onclick="closeFollowersScreen(); openRunnerProfileById(\'' + fUid + '\')"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700"><img src="' + fAvatar + '" class="w-full h-full object-cover"></div><span class="text-sm font-bold text-white">' + fName + '</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-zinc-500"></i></div>';
+                 });
+                 
+                 document.getElementById('followers-fullscreen-content').innerHTML = h;
+                 if(typeof lucide !== 'undefined') lucide.createIcons();
+                 
+                 const fsScreen = document.getElementById('followers-fullscreen');
+                 fsScreen.classList.remove('hidden');
+                 setTimeout(() => { fsScreen.classList.remove('translate-x-full'); }, 10);
+             } else {
+                 alert("You don't have any followers yet.");
+             }
+         });
+    }
+    
+    function closeFollowersScreen() {
+        const fsScreen = document.getElementById('followers-fullscreen');
+        if(fsScreen) {
+            fsScreen.classList.add('translate-x-full');
+            setTimeout(() => { fsScreen.classList.add('hidden'); }, 300);
+        }
     }
 
 function closeRunnerProfile() {
