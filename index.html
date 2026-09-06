@@ -1830,7 +1830,7 @@
     function openRunnerProfileById(id) {
          let runner = mockRunners.find(r => r.id == id);
          if (runner) {
-             openRunnerProfile(runner);
+             viewUserProfile(runner.id, runner.name, runner.avatar, (runner.distance || 0) + ' km');
              return;
          }
          
@@ -1844,24 +1844,12 @@
                          const gw = state.globalWorkouts.find(w => w.uid == id);
                          if (gw) dist = gw.distance;
                      }
-                     runner = {
-                         id: id,
-                         name: uData.displayName || 'Runner',
-                         avatar: uData.photoURL || './default-avatar.png',
-                         distance: dist
-                     };
-                     openRunnerProfile(runner);
+                     viewUserProfile(id, uData.displayName || 'Runner', uData.photoURL || './default-avatar.png', (dist || 0) + ' km');
                  } else {
                      if (state.globalWorkouts) {
                          const gw = state.globalWorkouts.find(w => w.uid == id);
                          if (gw) {
-                             runner = {
-                                 id: gw.uid,
-                                 name: gw.userName || 'Runner',
-                                 avatar: gw.userAvatar || './default-avatar.png',
-                                 distance: gw.distance,
-                             };
-                             openRunnerProfile(runner);
+                             viewUserProfile(gw.uid, gw.userName || 'Runner', gw.userAvatar || './default-avatar.png', (gw.distance || 0) + ' km');
                          }
                      }
                  }
