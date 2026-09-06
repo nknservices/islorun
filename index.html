@@ -1369,7 +1369,19 @@
             db.collection('users').doc(user.uid).onSnapshot(doc => {
                if (doc.exists) {
                    const data = doc.data();
-                   const followersEl = document.getElementById('profile-my-followers'); if (followersEl) { followersEl.classList.remove('hidden'); followersEl.innerText = (data.followers ? data.followers.length : 0) + ' Followers'; } if (data.isPro === true) {
+                   const followersEl = document.getElementById('profile-my-followers');
+if (followersEl) {
+    followersEl.classList.remove('hidden');
+    followersEl.classList.add('flex');
+    const followersText = document.getElementById('profile-my-followers-text');
+    if (followersText) {
+        followersText.innerText = (data.followers ? data.followers.length : 0) + ' Followers';
+    } else {
+        followersEl.innerHTML = '<i data-lucide="users" class="w-3 h-3"></i> <span id="profile-my-followers-text">' + (data.followers ? data.followers.length : 0) + ' Followers</span>';
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+if (data.isPro === true) {
                        // Check 30-day expiration
                        let grantedMs = Date.now();
                        if (data.proGrantedDate) {
@@ -3719,7 +3731,8 @@ function setProStatus(isPro, days) {
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
         
         if (isIos() && !isInStandaloneMode()) {
-          alert("To install the app on iOS:\nTap the Share icon at the bottom of Safari, then tap 'Add to Home Screen'.");
+          alert("To install the app on iOS:
+Tap the Share icon at the bottom of Safari, then tap 'Add to Home Screen'.");
         }
       }
     }
@@ -3808,6 +3821,7 @@ initFirebase(JSON.stringify(hardcodedFirebaseConfig));
 </script>
 </body>
 </html>
+
 
 
 
